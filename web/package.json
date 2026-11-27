@@ -1,0 +1,33 @@
+{
+  "name": "@kaida/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "«Қайда?» — веб-приложение (PWA): админка справочников, вход, основа для кабинетов",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint:i18n": "node scripts/check-i18n.mjs"
+  },
+  "dependencies": {
+    "@kaida/contracts": "*",
+    "@supabase/supabase-js": "^2.45.4",
+    "jspdf": "^2.5.2",
+    "maplibre-gl": "^4.7.1",
+    "next": "^15.1.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.0"
+  }
+}

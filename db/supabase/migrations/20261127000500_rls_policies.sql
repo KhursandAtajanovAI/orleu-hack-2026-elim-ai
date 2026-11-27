@@ -231,3 +231,6 @@ end $$;
 grant execute on function public.reports_list(public.report_status, public.report_type, uuid, int), public.report_get(uuid)
   to authenticated;
 grant execute on function public.waste_rules_list(uuid) to anon, authenticated;
+grant execute on function public.lon(public.sites), public.lat(public.sites), public.lon(public.facilities), public.lat(public.facilities)
+  to anon, authenticated;
+grant execute on function public.admin_users(text, int) to authenticated;

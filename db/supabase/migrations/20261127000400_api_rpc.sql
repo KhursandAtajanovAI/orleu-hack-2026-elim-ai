@@ -871,3 +871,24 @@ language sql stable security definer set search_path = public, extensions as $$
      order by ai_class, (city_id is null)   -- правило города важнее правила по умолчанию
   ) w
 $$;
+
+-- ============================================== вычисляемые поля для PostgREST
+-- select=*,lon,lat — координаты читаемыми числами (админка, карта); запись —
+-- в location строкой EWKT 'SRID=4326;POINT(lon lat)'.
+create or replace function public.lon(public.sites) returns double precision language sql immutable as $$ select st_x($1.location::geometry) $$;
+create or replace function public.lat(public.sites) returns double precision language sql immutable as $$ select st_y($1.location::geometry) $$;
+create or replace function public.lon(public.facilities) returns double precision language sql immutable as $$ select st_x($1.location::geometry) $$;
+create or replace function public.lat(public.facilities) returns double precision language sql immutable as $$ select st_y($1.location::geometry) $$;
+
+-- Список пользователей для админки (выдача ролей)
+create or replace function public.admin_users(p_search text default null, p_limit int default 200) returns jsonb
+language plpgsql stable security definer set search_path = public, extensions as $$
+begin
+  if not public.is_admin() then perform public.api_error('FORBIDDEN', 'Только администратор'); end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('user_id', p.user_id, 'full_name', p.full_name, 'email', p.email,
+      'phone', p.phone, 'roles', p.roles, 'city_id', p.city_id, 'facility_id', p.facility_id, 'is_demo', p.is_demo,
+      'created_at', p.created_at) order by p.created_at desc)
+    from (select * from public.profiles
+           where p_search is null or email ilike '%' || p_search || '%' or full_name ilike '%' || p_search || '%' or phone ilike '%' || p_search || '%'
+           order by created_at desc limit p_limit) p), '[]'::jsonb);
+end $$;

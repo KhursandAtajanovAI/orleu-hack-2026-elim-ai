@@ -27,3 +27,14 @@ Pods/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# проект
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+ai/models/*.onnx
+ai/models/*.pt
+ai/data/
+ai/runs/
+db/supabase/.temp/
+db/supabase/.branches/

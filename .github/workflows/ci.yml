@@ -60,6 +60,22 @@ jobs:
         working-directory: db/supabase/functions
         run: deno check api/index.ts
 
+  web:
+    name: Веб · типы, i18n, сборка
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:i18n -w @kaida/web
+      - run: npm run typecheck -w @kaida/web
+      - run: npm run build -w @kaida/web
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
   ai:
     name: ИИ-сервис · pytest
     runs-on: ubuntu-latest
