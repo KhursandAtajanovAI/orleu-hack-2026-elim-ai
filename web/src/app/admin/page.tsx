@@ -4,6 +4,7 @@ import CrudTable, { type Row } from '@/components/CrudTable';
 import UsersPanel from '@/components/UsersPanel';
 import QrPanel from '@/components/QrPanel';
 import SimulatorPanel from '@/components/SimulatorPanel';
+import PayoutsPanel from '@/components/PayoutsPanel';
 import { ADMIN_TABS, ENTITIES } from '@/lib/entities';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
@@ -34,7 +35,7 @@ export default function Admin() {
           <button key={x} onClick={() => go(x)} className={x === tab ? 'btn-primary py-1.5' : 'btn-ghost py-1.5'}>{t('admin.' + x)}</button>
         ))}
       </nav>
-      {tab === 'users' ? <UsersPanel /> : tab === 'qr' ? <QrPanel /> : tab === 'simulator' ? <SimulatorPanel /> : (
+      {tab === 'users' ? <UsersPanel /> : tab === 'qr' ? <QrPanel /> : tab === 'simulator' ? <SimulatorPanel /> : tab === 'payouts' ? <PayoutsPanel /> : (
         <CrudTable key={tab} config={{ ...ENTITIES[tab], onSelect: tab === 'sites' ? setSite : undefined }} />
       )}
       {tab === 'sites' && site && (
