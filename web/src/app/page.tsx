@@ -12,7 +12,7 @@ const MODULES: { key: string; roles: Role[] | 'all'; href?: string }[] = [
   { key: 'map', roles: 'all' },
   { key: 'workshop', roles: 'all' },
   { key: 'driver', roles: ['driver'], href: '/driver/' },
-  { key: 'operator', roles: ['operator'] },
+  { key: 'operator', roles: ['operator'], href: '/operator/' },
   { key: 'dashboard', roles: ['akimat'], href: '/dashboard/' },
   { key: 'admin', roles: ['admin'], href: '/admin/' },
 ];
