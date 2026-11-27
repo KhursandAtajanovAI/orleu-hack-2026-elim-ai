@@ -8,7 +8,7 @@ import { fmt, fmtDate } from '@/lib/dashboard';
 type Any = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /** Путь площадки (клик в рейтинге, ТЗ 11.1 → раздел 7): последний рейс по шагам 1–6 и итог в кг. */
-export default function SitePathDrawer({ siteId, onClose }: { siteId: string; onClose: () => void }) {
+export default function SitePathDrawer({ siteId, onClose, inline }: { siteId: string; onClose: () => void; inline?: boolean }) {
   const { t } = useI18n();
   const [data, setData] = useState<SitePath | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -28,15 +28,15 @@ export default function SitePathDrawer({ siteId, onClose }: { siteId: string; on
   const latest = d?.latest as Any | null;
   const done = new Set((latest?.timeline ?? []).filter((s: Any) => s.done).map((s: Any) => s.stage));
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
-      <aside className="h-full w-full max-w-lg overflow-auto bg-white p-5 shadow-xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+    <div className={inline ? '' : 'fixed inset-0 z-40 flex justify-end bg-black/30'} onClick={inline ? undefined : onClose}>
+      <aside className={inline ? 'card' : 'h-full w-full max-w-lg overflow-auto bg-white p-5 shadow-xl dark:bg-slate-900'} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
             <div className="text-xs text-slate-500">{t('dash.pathOf')}</div>
             <h2 className="text-xl font-bold">{d?.site?.address ?? '…'}</h2>
             {d?.site && <div className="text-sm text-slate-500">{d.site.qr_code} · {d.site.district?.name_ru} · {t('dash.site.cleanliness_score')}: <b>{fmt(d.site.cleanliness_score)}</b></div>}
           </div>
-          <button className="btn-ghost px-3 py-1" onClick={onClose} aria-label={t('app.close')}>✕</button>
+          {!inline && <button className="btn-ghost px-3 py-1" onClick={onClose} aria-label={t('app.close')}>✕</button>}
         </div>
         {err && <p className="text-red-600">{err}</p>}
         {!d && !err && <p>{t('app.loading')}</p>}

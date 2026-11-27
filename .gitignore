@@ -39,3 +39,7 @@ ai/runs/
 db/supabase/.temp/
 db/supabase/.branches/
 simulator/data/routes-cache.json
+
+# рантайм ONNX и модель копируются при сборке
+web/public/ort/
+web/public/models/

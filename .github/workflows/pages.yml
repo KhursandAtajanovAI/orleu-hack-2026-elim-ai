@@ -2,6 +2,7 @@ name: Pages · документация API и моки
 
 # GitHub Pages: Settings → Pages → Source: GitHub Actions.
 # Публикует: /            — веб-приложение (PWA, статический экспорт Next.js)
+#            /models/     — модель ИИ waste-yolo (ONNX) для распознавания прямо в браузере
 #            /api/        — документация OpenAPI (Redoc), /openapi.yaml, /mocks/*.json, /waste-rules.json
 # Адрес Supabase для фронта — переменные репозитория (Settings → Variables → Actions):
 #   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_DEMO_MODE (anon key публичный по природе).
@@ -39,6 +40,15 @@ jobs:
           NEXT_PUBLIC_DEMO_MODE: ${{ vars.NEXT_PUBLIC_DEMO_MODE || 'true' }}
           NEXT_TELEMETRY_DISABLED: 1
         run: npm run build -w @kaida/web && cp -r web/out site
+      - name: Модель ИИ для браузера (релиз model-waste-yolo-0.1)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODEL_TAG: ${{ vars.MODEL_TAG || 'model-waste-yolo-0.1' }}
+        run: |
+          mkdir -p site/models
+          gh release download "$MODEL_TAG" -R "${{ github.repository }}" -p model.onnx -O site/models/waste-yolo.onnx \
+            || echo "::warning::Модель $MODEL_TAG не скачана — распознавание в браузере будет недоступно"
+          ls -la site/models
       - name: Документация API и моки
         run: |
           mkdir -p site/api site/mocks
