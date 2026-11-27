@@ -1,0 +1,8 @@
+extends:
+  - recommended
+rules:
+  operation-4xx-response: off
+  no-server-example.com: off
+  info-license-url: off
+  security-defined: off
+  no-invalid-media-type-examples: warn

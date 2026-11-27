@@ -1,0 +1,60 @@
+name: Pages · документация API и моки
+
+# GitHub Pages: Settings → Pages → Source: GitHub Actions.
+# Публикует: /            — веб-приложение (PWA, статический экспорт Next.js)
+#            /api/        — документация OpenAPI (Redoc), /openapi.yaml, /mocks/*.json, /waste-rules.json
+# Адрес Supabase для фронта — переменные репозитория (Settings → Variables → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_DEMO_MODE (anon key публичный по природе).
+#   Без переменных собирается на облачный стенд из docs/CLOUD.md.
+on:
+  push:
+    branches: [main]
+    paths: ['contracts/**', 'web/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Веб-приложение
+        env:
+          NEXT_BASE_PATH: /${{ github.event.repository.name }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://xqscpsytnferdggitdzf.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2Nwc3l0bmZlcmRnZ2l0ZHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3ODE3NTUsImV4cCI6MjExMTM1Nzc1NX0.Ki9i0rfeTUSxblDAfsdC7goNRlvRj5dAMogqMFvaJEA' }}
+          NEXT_PUBLIC_DEMO_MODE: ${{ vars.NEXT_PUBLIC_DEMO_MODE || 'true' }}
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build -w @kaida/web && cp -r web/out site
+      - name: Документация API и моки
+        run: |
+          mkdir -p site/api site/mocks
+          npx redocly build-docs contracts/openapi.yaml -o site/api/index.html
+          cp contracts/openapi.yaml contracts/waste-rules.json site/
+          cp contracts/mocks/*.json site/mocks/
+          touch site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

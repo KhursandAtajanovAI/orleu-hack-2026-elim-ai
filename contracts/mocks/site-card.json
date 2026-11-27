@@ -1,0 +1,71 @@
+{
+    "site": {
+        "id": "40000000-0000-0000-0000-000000000001",
+        "address": "пр. Кабанбай батыра, 11",
+        "qr_code": "QR-S1",
+        "location": {
+            "lat": 51.090000,
+            "lon": 71.420000
+        },
+        "containers": [
+            {
+                "id": "50000000-0000-0000-0000-000000000011",
+                "volume_l": 1100,
+                "fill_level": 0,
+                "waste_type": "plastic"
+            },
+            {
+                "id": "50000000-0000-0000-0000-000000000012",
+                "volume_l": 1100,
+                "fill_level": 100,
+                "waste_type": "mixed"
+            }
+        ],
+        "district_id": "20000000-0000-0000-0000-000000000001",
+        "last_pickup_at": "2026-11-27T12:55:05.0212+00:00",
+        "cleanliness_score": 64.00,
+        "residential_complex": null
+    },
+    "last_stage": 6,
+    "tip_of_day": {
+        "class": "aluminum_can",
+        "hint_kk": "Банканы жаныштаңыз — аз орын алады",
+        "hint_ru": "Сомните банку — она займёт меньше места"
+    },
+    "top_errors": [
+        {
+            "bin": "organic",
+            "class": "organic",
+            "count": 1,
+            "hint_kk": "Тамақ қалдықтары пакетсіз",
+            "hint_ru": "Пищевые отходы без пакета",
+            "label_kk": "Органикалық қалдық",
+            "label_ru": "Органика"
+        },
+        {
+            "bin": "plastic",
+            "class": "film",
+            "count": 1,
+            "hint_kk": "Тек таза әрі құрғақ пакеттер, пакетті пакетке салыңыз",
+            "hint_ru": "Только чистые и сухие пакеты, сложите пакет в пакет",
+            "label_kk": "Үлдір және пакеттер",
+            "label_ru": "Плёнка и пакеты"
+        }
+    ],
+    "month_site_kg": 666.67,
+    "last_pickup_at": "2026-11-27T12:55:05.0212+00:00",
+    "last_destination": {
+        "id": "30000000-0000-0000-0000-000000000002",
+        "name": "Полигон",
+        "type": "landfill",
+        "address": null,
+        "location": {
+            "lat": 51.050000,
+            "lon": 71.600000
+        },
+        "model_3d_url": null
+    },
+    "cleanliness_color": "yellow",
+    "cleanliness_score": 64.00,
+    "month_recycled_kg": 400.00
+}

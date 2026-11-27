@@ -1,0 +1,15 @@
+{
+  "name": "Қайда? — куда уходят отходы",
+  "short_name": "Қайда?",
+  "description": "Фото отходов → ИИ → путь → жалоба. Платформа отслеживания отходов Астаны.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F766E",
+  "lang": "ru",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

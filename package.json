@@ -1,0 +1,33 @@
+{
+  "name": "kaida-monorepo",
+  "private": true,
+  "description": "«Қайда?» — монорепо: /web /ai /db /simulator /assets /contracts",
+  "workspaces": [
+    "contracts",
+    "web",
+    "simulator"
+  ],
+  "scripts": {
+    "contracts:lint": "redocly lint contracts/openapi.yaml --config contracts/redocly.yaml",
+    "contracts:types": "openapi-typescript contracts/openapi.yaml -o contracts/src/openapi.ts",
+    "contracts:docs": "redocly build-docs contracts/openapi.yaml -o dist/api/index.html",
+    "contracts:mock": "prism mock contracts/openapi.yaml",
+    "contracts:check": "npm run contracts:types && git diff --exit-code contracts/src/openapi.ts",
+    "test": "npm run test:api && npm test --workspaces --if-present",
+    "test:api": "node --experimental-strip-types --no-warnings --test db/supabase/functions/api/handler.test.ts",
+    "test:db": "db/scripts/apply_local.sh --tests",
+    "sim:all": "npm run all -w @kaida/simulator",
+    "sim:history": "npm run history -w @kaida/simulator",
+    "sim:live": "npm run live -w @kaida/simulator",
+    "sim:check": "npm run check -w @kaida/simulator"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.34.24",
+    "@stoplight/prism-cli": "^5.12.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,62 @@
+# TACO (http://tacodataset.org, CC BY 4.0) → наши 13 классов (ТЗ 6.1).
+# null — категория пропускается (слишком мелкая или неоднозначная).
+Aluminium foil: aluminum_can
+Battery: hazardous
+Aluminium blister pack: other
+Carded blister pack: other
+Other plastic bottle: hard_plastic
+Clear plastic bottle: pet_bottle
+Glass bottle: glass
+Plastic bottle cap: hard_plastic
+Metal bottle cap: tin_can
+Broken glass: glass
+Food Can: tin_can
+Aerosol: tin_can
+Drink can: aluminum_can
+Toilet tube: cardboard
+Other carton: cardboard
+Egg carton: cardboard
+Drink carton: tetra_pak
+Corrugated carton: cardboard
+Meal carton: cardboard
+Pizza box: cardboard
+Paper cup: tetra_pak
+Disposable plastic cup: hard_plastic
+Foam cup: other
+Glass cup: glass
+Other plastic cup: hard_plastic
+Food waste: organic
+Glass jar: glass
+Plastic lid: hard_plastic
+Metal lid: tin_can
+Other plastic: hard_plastic
+Magazine paper: paper
+Tissues: other
+Wrapping paper: paper
+Normal paper: paper
+Paper bag: paper
+Plastified paper bag: other
+Plastic film: film
+Six pack rings: film
+Garbage bag: film
+Other plastic wrapper: film
+Single-use carrier bag: film
+Polypropylene bag: film
+Crisp packet: other
+Spread tub: hard_plastic
+Tupperware: hard_plastic
+Disposable food container: hard_plastic
+Foam food container: other
+Other plastic container: hard_plastic
+Plastic glooves: film
+Plastic utensils: hard_plastic
+Pop tab: aluminum_can
+Rope & strings: textile
+Scrap metal: tin_can
+Shoe: textile
+Squeezable tube: other
+Plastic straw: hard_plastic
+Paper straw: paper
+Styrofoam piece: other
+Unlabeled litter: other
+Cigarette: null

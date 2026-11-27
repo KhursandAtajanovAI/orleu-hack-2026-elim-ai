@@ -1,0 +1,19 @@
+{
+    "email": "resident1@test",
+    "phone": null,
+    "roles": [
+        "resident"
+    ],
+    "city_id": null,
+    "is_demo": false,
+    "user_id": "00000000-0000-0000-0000-0000000000f1",
+    "language": "kk",
+    "full_name": "Айгерим",
+    "facility_id": null,
+    "consent_data": true,
+    "home_site_id": "40000000-0000-0000-0000-000000000001",
+    "bonus_balance": 110.00,
+    "consent_training": true,
+    "driver_vehicle_ids": [
+    ]
+}

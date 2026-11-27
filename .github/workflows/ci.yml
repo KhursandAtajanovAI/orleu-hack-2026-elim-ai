@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  db:
+    name: БД · миграции и SQL-тесты (PostGIS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Справочник waste_rules совпадает с contracts/waste-rules.json
+        run: python3 db/scripts/gen_waste_rules_sql.py --check
+      - name: Миграции + сквозной сценарий пути отходов
+        run: db/scripts/apply_local.sh --tests
+
+  contracts-api:
+    name: Контракты OpenAPI · Edge Function
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: OpenAPI lint
+        run: npm run contracts:lint
+      - name: Типы TS сгенерированы из актуального openapi.yaml
+        run: npm run contracts:check
+      - name: Typecheck @kaida/contracts
+        run: npm run typecheck -w @kaida/contracts
+      - name: Тесты роутера API
+        run: npm run test:api
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: deno check (Edge Function)
+        working-directory: db/supabase/functions
+        run: deno check api/index.ts
+
+  web:
+    name: Веб · типы, i18n, сборка
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:i18n -w @kaida/web
+      - run: npm run typecheck -w @kaida/web
+      - run: npm run build -w @kaida/web
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  ai:
+    name: ИИ-сервис · pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  ai-image:
+    name: ИИ-сервис · Docker → GHCR
+    needs: ai
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Имя образа в нижнем регистре
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kaida-ai" >> "$GITHUB_ENV"
+      - name: Последняя опубликованная модель (если есть)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName --jq '.[].tagName' 2>/dev/null | grep '^model-' | head -1 \
+            | xargs -r -I{} echo "https://github.com/$GITHUB_REPOSITORY/releases/download/{}/model.onnx")
+          echo "MODEL_URL=${url}" >> "$GITHUB_ENV"
+          echo "модель: ${url:-нет (сервис стартует в режиме degraded и скачает MODEL_URL при запуске)}"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ai/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: |
+            MODEL_URL=${{ env.MODEL_URL }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'pr' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  simulator:
+    name: Симулятор · тесты и e2e на Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck и юнит-тесты симулятора
+        run: npm run typecheck -w @kaida/simulator && npm test -w @kaida/simulator
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Supabase (пустая база + 7 миграций)
+        working-directory: db
+        run: supabase start -x vector,logflare,imgproxy,supavisor,mailpit,studio,postgres-meta
+      - name: Edge Function api (demo-login)
+        working-directory: db
+        run: |
+          printf 'DEMO_MODE=true\nDEMO_PASSWORD=ci-demo-password-123\n' > /tmp/fn.env
+          nohup supabase functions serve api --env-file /tmp/fn.env --no-verify-jwt > /tmp/fn.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:54321/functions/v1/api/health && break; sleep 2; done
+          curl -s http://127.0.0.1:54321/functions/v1/api/health || (cat /tmp/fn.log; exit 1)
+      - name: Одна команда → полные тестовые данные (только публичное API, anon key)
+        working-directory: db
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          cd ../simulator
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" OSRM_OFFLINE=1 \
+            node --experimental-strip-types --no-warnings src/cli.ts all --days 4
+      - name: Проверки цепочки (ТЗ 7, 14)
+        run: psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -X -f simulator/test/e2e_checks.sql
+      - name: Повторный запуск идемпотентен
+        working-directory: db
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          cd ../simulator
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" OSRM_OFFLINE=1 \
+            node --experimental-strip-types --no-warnings src/cli.ts all --days 2
+          psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -X -f test/e2e_checks.sql
+      - name: Лог функции
+        if: failure()
+        run: cat /tmp/fn.log || true

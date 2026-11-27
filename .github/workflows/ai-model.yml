@@ -1,0 +1,116 @@
+name: AI · модель (экспорт ONNX, бенчмарк, релиз)
+
+# Запуск вручную: Actions → «AI · модель» → Run workflow.
+#  * по умолчанию — стартовая модель YOLO11n (веса COCO) → ONNX → проверка скорости на CPU
+#    → GitHub Release `model-<версия>` → Docker-образ с моделью внутри в GHCR;
+#  * weights_url — свои дообученные веса best.pt (из Kaggle/Colab, см. ai/training/notebooks).
+on:
+  # на PR — только экспорт, бенчмарк и smoke-тест (без релиза), чтобы проверить пайплайн
+  pull_request:
+    paths: ['ai/**', '.github/workflows/ai-model.yml']
+  workflow_dispatch:
+    inputs:
+      weights:
+        description: 'Веса Ultralytics (yolo11n.pt / yolo11s.pt) или URL на best.pt'
+        default: yolo11n.pt
+      version:
+        description: 'Имя версии модели (в каждом ответе и в scans/pickups)'
+        default: waste-yolo-0.0-coco
+      class_map:
+        description: 'coco — стартовая модель COCO; native — дообученная на 13 классах'
+        default: coco
+        type: choice
+        options: [coco, native]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Ultralytics (CPU)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+          pip install -r ai/requirements-train.txt -r ai/requirements-dev.txt
+      - name: Веса
+        run: |
+          w="${{ inputs.weights || 'yolo11n.pt' }}"
+          if [[ "$w" == http* ]]; then curl -fsSL "$w" -o ai/best.pt; echo "W=best.pt" >> "$GITHUB_ENV"; else echo "W=$w" >> "$GITHUB_ENV"; fi
+      - name: Экспорт в ONNX
+        working-directory: ai
+        run: python training/export.py --weights "$W" --version "${{ inputs.version || 'waste-yolo-0.0-coco' }}" --out models/model.onnx
+      - name: Скорость на CPU (критерий ≤ 3 с на 1280 px)
+        working-directory: ai
+        run: python training/bench.py models/model.onnx --runs 15 --out models/bench.json
+      - name: Smoke-тест сервиса с настоящей моделью
+        working-directory: ai
+        env:
+          MODEL_PATH: models/model.onnx
+          CLASS_MAP: ${{ inputs.class_map || 'coco' }}
+        run: |
+          uvicorn app.main:app --port 8000 & sleep 8
+          curl -fsS localhost:8000/ai/health | tee models/health.json
+          python - <<'PY'
+          import io, json, urllib.request, numpy as np
+          from PIL import Image
+          img = Image.fromarray(np.random.default_rng(0).integers(0, 255, (960, 1280, 3), dtype=np.uint8))
+          b = io.BytesIO(); img.save(b, format='JPEG'); data = b.getvalue()
+          bd = 'x' * 16
+          body = (f'--{bd}\r\nContent-Disposition: form-data; name="image"; filename="a.jpg"\r\nContent-Type: image/jpeg\r\n\r\n').encode() + data + f'\r\n--{bd}--\r\n'.encode()
+          req = urllib.request.Request('http://localhost:8000/ai/analyze', data=body, headers={'Content-Type': f'multipart/form-data; boundary={bd}'})
+          try:
+              print(urllib.request.urlopen(req).read().decode()[:500])
+          except urllib.error.HTTPError as e:
+              print(e.code, e.read().decode())  # NOTHING_FOUND на шуме — ожидаемо
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model-onnx
+          path: ai/models/
+      - name: Release model-${{ inputs.version }}
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="model-${{ inputs.version }}"
+          cat > notes.md <<NOTES
+          Модель **${{ inputs.version }}** · веса \`${{ inputs.weights }}\` · CLASS_MAP=${{ inputs.class_map }}
+
+          \`\`\`json
+          $(cat ai/models/bench.json)
+          \`\`\`
+          ИИ-сервис: \`MODEL_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/model.onnx\`
+          NOTES
+          gh release delete "$tag" -y --cleanup-tag 2>/dev/null || true
+          gh release create "$tag" ai/models/model.onnx ai/models/model.json ai/models/bench.json \
+            --title "Модель ${{ inputs.version }}" --notes-file notes.md --prerelease
+          echo "MODEL_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/model.onnx" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v3
+        if: github.event_name == 'workflow_dispatch'
+      - uses: docker/login-action@v3
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kaida-ai" >> "$GITHUB_ENV"
+        if: github.event_name == 'workflow_dispatch'
+      - uses: docker/build-push-action@v6
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          context: .
+          file: ai/Dockerfile
+          push: true
+          build-args: |
+            MODEL_URL=${{ env.MODEL_URL }}
+            MODEL_VERSION=${{ inputs.version }}
+          tags: |
+            ${{ env.IMAGE }}:${{ inputs.version }}
+            ${{ env.IMAGE }}:latest

@@ -1,0 +1,70 @@
+{
+    "period": {
+        "to": "2026-11-27T12:55:05.605468+00:00",
+        "from": "2026-11-20T12:55:05.605468+00:00"
+    },
+    "current": {
+        "trips": 3,
+        "pickups": 4,
+        "energy_t": 0.250,
+        "landfill_t": 0.150,
+        "collected_t": 1.000,
+        "composition": [
+            {
+                "kg": 350.00,
+                "category": "recycled",
+                "output_type": "pet"
+            },
+            {
+                "kg": 250.00,
+                "category": "energy",
+                "output_type": "rdf"
+            },
+            {
+                "kg": 150.00,
+                "category": "landfill",
+                "output_type": "landfill"
+            },
+            {
+                "kg": 150.00,
+                "category": "recycled",
+                "output_type": "hdpe"
+            },
+            {
+                "kg": 100.00,
+                "category": "recycled",
+                "output_type": "film"
+            }
+        ],
+        "mixed_trips": 2,
+        "new_reports": 1,
+        "deviation_trips": 1,
+        "real_recycled_t": 0.600,
+        "recycling_gap_t": 0.400,
+        "real_recycled_pct": 60.0,
+        "claimed_recycled_t": 1.000,
+        "avg_cleanliness_pct": 73.8
+    },
+    "previous": {
+        "trips": 0,
+        "pickups": 0,
+        "energy_t": 0.000,
+        "landfill_t": 0.000,
+        "collected_t": 0.000,
+        "composition": [
+        ],
+        "mixed_trips": 0,
+        "new_reports": 0,
+        "deviation_trips": 0,
+        "real_recycled_t": 0.000,
+        "claimed_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    "delta_pct": {
+        "collected_t": null,
+        "mixed_trips": null,
+        "new_reports": null,
+        "real_recycled_t": null,
+        "claimed_recycled_t": null
+    }
+}
