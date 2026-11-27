@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: 17 24 39;
+  --panel: 255 255 255;
+  --line: 226 232 240;
+  --muted: 100 116 139;
+  --brand: 5 150 105;
+  --bg: #f1f5f9;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --ink: 226 232 240;
+  --panel: 17 24 39;
+  --line: 51 65 85;
+  --muted: 148 163 184;
+  --brand: 52 211 153;
+  --bg: #0b1220;
+  color-scheme: dark;
+}
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: rgb(var(--ink));
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+.glass {
+  background: rgb(var(--panel) / 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(var(--line));
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition active:scale-[0.98];
+  min-height: 44px;
+  border: 1px solid rgb(var(--line));
+  background: rgb(var(--panel));
+}
+.btn:hover {
+  border-color: rgb(var(--brand));
+}
+.btn-primary {
+  background: rgb(var(--brand));
+  color: #052e1f;
+  border-color: transparent;
+  font-weight: 600;
+}
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}

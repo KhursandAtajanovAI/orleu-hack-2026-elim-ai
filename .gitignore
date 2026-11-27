@@ -27,3 +27,7 @@ Pods/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Next.js
+*.tsbuildinfo
+next-env.d.ts
