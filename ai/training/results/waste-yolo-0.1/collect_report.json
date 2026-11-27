@@ -1,0 +1,13 @@
+{
+  "taco": {
+    "annotations.json": {
+      "images": 1500,
+      "downloaded": 1500
+    }
+  },
+  "trashnet": {
+    "url": "https://huggingface.co/datasets/garythung/trashnet/resolve/main/dataset-resized.zip",
+    "root": "data/raw/trashnet/dataset-resized",
+    "images": 2527
+  }
+}

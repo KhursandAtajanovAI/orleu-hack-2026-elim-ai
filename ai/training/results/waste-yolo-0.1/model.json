@@ -1,0 +1,6 @@
+{
+  "model_version": "waste-yolo-0.1",
+  "imgsz": 416,
+  "names": "{0: 'pet_bottle', 1: 'hard_plastic', 2: 'film', 3: 'paper', 4: 'cardboard', 5: 'tetra_pak', 6: 'glass', 7: 'aluminum_can', 8: 'tin_can', 9: 'organic', 10: 'textile', 11: 'hazardous', 12: 'other'}",
+  "bytes": 10578212
+}

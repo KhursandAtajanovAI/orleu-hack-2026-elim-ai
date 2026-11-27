@@ -1,0 +1,22 @@
+{
+  "total": 4018,
+  "train": 3214,
+  "val": 401,
+  "test": 403,
+  "test_astana": 0,
+  "train_boxes_per_class": {
+    "paper": 575,
+    "cardboard": 504,
+    "glass": 623,
+    "other": 666,
+    "hard_plastic": 1132,
+    "pet_bottle": 222,
+    "tin_can": 463,
+    "aluminum_can": 320,
+    "tetra_pak": 85,
+    "film": 640,
+    "hazardous": 2,
+    "textile": 27,
+    "organic": 7
+  }
+}

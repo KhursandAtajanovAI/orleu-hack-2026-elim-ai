@@ -1,0 +1,43 @@
+{
+  "weights": "/home/runner/work/orleu-hack-2026-elim-ai/orleu-hack-2026-elim-ai/runs/waste-yolo-0.1/weights/best.pt",
+  "val": {
+    "mAP50": 0.3751,
+    "mAP50_95": 0.318,
+    "precision": 0.5184,
+    "recall": 0.3345,
+    "AP50_per_class": {
+      "pet_bottle": 0.1556,
+      "hard_plastic": 0.322,
+      "film": 0.2063,
+      "paper": 0.7143,
+      "cardboard": 0.679,
+      "tetra_pak": 0.3453,
+      "glass": 0.8395,
+      "aluminum_can": 0.1443,
+      "tin_can": 0.6808,
+      "organic": 0.2,
+      "textile": 0.0012,
+      "other": 0.2128
+    }
+  },
+  "test": {
+    "mAP50": 0.391,
+    "mAP50_95": 0.3495,
+    "precision": 0.4842,
+    "recall": 0.4014,
+    "AP50_per_class": {
+      "pet_bottle": 0.2835,
+      "hard_plastic": 0.4747,
+      "film": 0.1959,
+      "paper": 0.9015,
+      "cardboard": 0.7477,
+      "tetra_pak": 0.0377,
+      "glass": 0.6977,
+      "aluminum_can": 0.1222,
+      "tin_can": 0.7574,
+      "textile": 0.0,
+      "other": 0.0821
+    }
+  },
+  "mAP50": 0.391
+}
