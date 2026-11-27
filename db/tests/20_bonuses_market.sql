@@ -60,7 +60,7 @@ select tests.as_user('00000000-0000-0000-0000-0000000000f1');
 select tests.ok((select bonus_balance from public.profiles where user_id = auth.uid()) = 1000, 'баланс 1000 после начисления');
 select tests.err($q$select public.shop_redeem('b0000000-0000-4000-8000-000000000001')$q$, 'INSUFFICIENT_BONUS', 'биогумус за 1500 при балансе 1000 — нехватка');
 
-select tests.ok((public.shop_redeem('b0000000-0000-4000-8000-000000000005', null, 'c-1') ->> 'promo_code') = 'KAIDA-GREEN',
+select tests.ok((public.shop_redeem('b0000000-0000-4000-8000-000000000005', null, 'c-1') -> 'details' ->> 'promo_code') = 'KAIDA-GREEN',
                 'скидка партнёра выдаёт промокод');
 select tests.ok((public.shop_redeem('b0000000-0000-4000-8000-000000000005', null, 'c-1') ->> 'duplicate')::boolean,
                 'повтор с тем же client_id не списывает второй раз');
