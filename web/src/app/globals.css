@@ -13,3 +13,13 @@ body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100; 
 @media print {
   .no-print { display: none !important; }
 }
+
+/* ---- 3D-карта и 3D-цех (потоки D, E): переменные темы, .glass ---- */
+:root { --ink: 17 24 39; --panel: 255 255 255; --line: 226 232 240; --muted: 100 116 139; --viz-bg: #f1f5f9; }
+:root[data-theme='dark'] { --ink: 226 232 240; --panel: 17 24 39; --line: 51 65 85; --muted: 148 163 184; --viz-bg: #0b1220; }
+.viz { background: var(--viz-bg); color: rgb(var(--ink)); min-height: 100dvh; }
+.viz .btn { min-height: 44px; border: 1px solid rgb(var(--line)); background: rgb(var(--panel)); font-size: 0.875rem; }
+.viz .btn:hover { border-color: #0F766E; }
+.viz .btn-primary { background: #0F766E; color: #fff; border-color: transparent; font-weight: 600; }
+.glass { background: rgb(var(--panel) / 0.92); backdrop-filter: blur(10px); border: 1px solid rgb(var(--line)); }
+.maplibregl-ctrl-attrib { font-size: 10px; }
