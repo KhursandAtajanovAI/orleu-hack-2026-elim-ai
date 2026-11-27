@@ -8,6 +8,7 @@ import type {
   SitePath,
 } from '@/lib/contracts';
 import { useI18n } from '@/lib/i18n';
+import { LANDMARKS, landmarkDesc, landmarkName } from './landmarks';
 import {
   CLEAN_BAD,
   CLEAN_GOOD,
@@ -23,7 +24,8 @@ export type Selection =
   | { kind: 'site'; id: string }
   | { kind: 'facility'; id: string }
   | { kind: 'vehicle'; id: string }
-  | { kind: 'complaint'; id: string };
+  | { kind: 'complaint'; id: string }
+  | { kind: 'landmark'; id: string };
 
 export interface LayerState {
   sites: boolean;
@@ -32,6 +34,7 @@ export interface LayerState {
   complaints: boolean;
   cleanliness: boolean;
   heat: boolean;
+  landmarks: boolean;
 }
 
 const fmtTime = (iso?: string) =>
@@ -51,12 +54,13 @@ export function ObjectCard(props: {
   facility?: MapFacility;
   vehicle?: MapVehicle;
   complaint?: MapComplaint;
+  landmark?: string;
   onClose: () => void;
   onPath: (s: MapSite) => void;
   onWorkshop: (f: MapFacility) => void;
 }) {
   const { t } = useI18n();
-  const { site, facility, vehicle, complaint } = props;
+  const { site, facility, vehicle, complaint, landmark } = props;
   return (
     <div className="glass pointer-events-auto w-full rounded-2xl p-4 shadow-xl sm:w-[340px]">
       <div className="flex items-start justify-between gap-3">
@@ -82,6 +86,7 @@ export function ObjectCard(props: {
               <div className="text-xs text-muted">{vehicle.type}</div>
             </>
           )}
+          {landmark && <div className="text-base font-semibold">{t(landmarkName(landmark))}</div>}
           {complaint && (
             <div className="text-base font-semibold">
               {t(`complaint.type.${complaint.type}` as 'complaint.type.mixed')}
@@ -92,6 +97,13 @@ export function ObjectCard(props: {
           ×
         </button>
       </div>
+
+      {landmark && (
+        <div className="mt-2 space-y-2 text-sm">
+          <p>{t(landmarkDesc(landmark))}</p>
+          <p className="text-xs text-muted">{t('landmark.model_note')}</p>
+        </div>
+      )}
 
       {site && (
         <>
@@ -188,6 +200,7 @@ export function LayerPanel(props: {
   onToggle: (k: keyof LayerState) => void;
   open: boolean;
   setOpen: (v: boolean) => void;
+  onLandmark?: (id: string) => void;
 }) {
   const { t } = useI18n();
   const keys: Array<[keyof LayerState, 'layer.sites']> = [
@@ -197,9 +210,10 @@ export function LayerPanel(props: {
     ['complaints', 'layer.complaints' as 'layer.sites'],
     ['cleanliness', 'layer.cleanliness' as 'layer.sites'],
     ['heat', 'layer.heat' as 'layer.sites'],
+    ['landmarks', 'layer.landmarks' as 'layer.sites'],
   ];
   return (
-    <div className="glass pointer-events-auto rounded-2xl shadow-lg">
+    <div className="glass pointer-events-auto w-[min(290px,calc(100vw-24px))] rounded-2xl shadow-lg">
       <button
         className="flex w-full items-center justify-between gap-6 px-4 py-2.5 text-sm font-semibold"
         onClick={() => props.setOpen(!props.open)}
@@ -221,6 +235,15 @@ export function LayerPanel(props: {
               {t(label)}
             </label>
           ))}
+          {props.layers.landmarks && (
+            <div className="flex flex-wrap gap-1 border-t border-line px-1 pt-2">
+              {LANDMARKS.map((l) => (
+                <button key={l.id} onClick={() => props.onLandmark?.(l.id)} className="rounded-full border border-line px-2 py-1 text-[11px] hover:border-brand">
+                  {t(landmarkName(l.id))}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="space-y-1 border-t border-line px-2 pt-2 text-xs text-muted">
             {[
               [CLEAN_GOOD, 'legend.good'],

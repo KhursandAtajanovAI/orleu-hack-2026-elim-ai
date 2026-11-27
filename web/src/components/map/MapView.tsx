@@ -33,6 +33,7 @@ import {
   rgba,
 } from './constants';
 import { buildTruckMesh } from './truckMesh';
+import { LANDMARKS, PART_INSTANCES, landmarkName, shapeMeshes, type Shape } from './landmarks';
 import { LayerPanel, ObjectCard, PathPanel, type LayerState, type Selection } from './Panels';
 
 const STYLE_LIGHT = process.env.NEXT_PUBLIC_MAP_STYLE_LIGHT || 'https://tiles.openfreemap.org/styles/positron';
@@ -82,6 +83,7 @@ interface Live {
   zoom: number;
   path: PathAnim | null;
   pathT: number;
+  landmarkName: (id: string) => string;
 }
 
 export default function MapView() {
@@ -101,7 +103,7 @@ export default function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [offlineBase, setOfflineBase] = useState(false);
   const [layers, setLayers] = useState<LayerState>({
-    sites: true, facilities: true, vehicles: true, complaints: true, cleanliness: true, heat: false,
+    sites: true, facilities: true, vehicles: true, complaints: true, cleanliness: true, heat: false, landmarks: true,
   });
   const [layersOpen, setLayersOpen] = useState(false);
   const [selected, setSelected] = useState<Selection | null>(null);
@@ -113,13 +115,14 @@ export default function MapView() {
   const [mapReady, setMapReady] = useState(false);
 
   const live = useRef<Live>({
-    data: null, layers, theme: 'dark', selected: null, mobile: false, zoom: 12, path: null, pathT: 0,
+    data: null, layers, theme: 'dark', selected: null, mobile: false, zoom: 12, path: null, pathT: 0, landmarkName: (id) => id,
   });
   live.current.data = data;
   live.current.layers = layers;
   live.current.theme = theme;
   live.current.selected = selected;
   live.current.mobile = mobile;
+  live.current.landmarkName = (id) => t(landmarkName(id));
 
   // ---------- адаптивность ----------
   useEffect(() => {
@@ -207,6 +210,7 @@ export default function MapView() {
         else if (id === 'sites-3d') setSelected({ kind: 'site', id: o.id });
         else if (id === 'vehicles' || id === 'vehicles-flat') setSelected({ kind: 'vehicle', id: o.id });
         else if (id === 'complaints') setSelected({ kind: 'complaint', id: o.id });
+        else if (id.startsWith('lm-')) setSelected({ kind: 'landmark', id: (o as unknown as { lid: string }).lid });
       },
       onHover: (info) => {
         map.getCanvas().style.cursor = info.object ? 'pointer' : '';
@@ -427,6 +431,7 @@ export default function MapView() {
   const selSite = selected?.kind === 'site' ? data?.sites.find((s) => s.id === selected.id) : undefined;
   const selFac = selected?.kind === 'facility' ? data?.facilities.find((f) => f.id === selected.id) : undefined;
   const selVeh = selected?.kind === 'vehicle' ? liveVeh[selected.id] : undefined;
+  const selLm = selected?.kind === 'landmark' ? LANDMARKS.find((l) => l.id === selected.id) : undefined;
   const selCmp = selected?.kind === 'complaint' ? data?.complaints.find((c) => c.id === selected.id) : undefined;
 
   useEffect(() => {
@@ -436,8 +441,10 @@ export default function MapView() {
       selSite ? ([selSite.lon, selSite.lat] as LonLat)
       : selFac ? ([selFac.lon, selFac.lat] as LonLat)
       : selCmp ? ([selCmp.lon, selCmp.lat] as LonLat)
+      : selLm ? ([selLm.lon, selLm.lat] as LonLat)
       : null;
-    if (p) map.easeTo({ center: p, zoom: Math.max(map.getZoom(), 15.2), duration: 900 });
+    if (selLm && p) map.easeTo({ center: p, zoom: 16, pitch: 62, bearing: map.getBearing() + 25, duration: 1400 });
+    else if (p) map.easeTo({ center: p, zoom: Math.max(map.getZoom(), 15.2), duration: 900 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
@@ -525,7 +532,7 @@ export default function MapView() {
   }, [data, mapReady, startPath]);
 
   const toggle = (k: keyof LayerState) => setLayers((l) => ({ ...l, [k]: !l[k] }));
-  const cardOpen = !pathSite && (selSite || selFac || selVeh || selCmp);
+  const cardOpen = !pathSite && (selSite || selFac || selVeh || selCmp || selLm);
   const resetView = () => mapRef.current?.easeTo({ bearing: 0, pitch: mobile ? 35 : 55, duration: 600 });
 
   const banner = useMemo(() => {
@@ -556,7 +563,7 @@ export default function MapView() {
           </div>
         </div>
         <div className="w-fit">
-          <LayerPanel layers={layers} onToggle={toggle} open={layersOpen} setOpen={setLayersOpen} />
+          <LayerPanel layers={layers} onToggle={toggle} open={layersOpen} setOpen={setLayersOpen} onLandmark={(id) => setSelected({ kind: 'landmark', id })} />
         </div>
         {mobile && (
           <div className="glass pointer-events-auto w-fit max-w-[260px] rounded-xl px-3 py-1.5 text-[11px] text-muted">
@@ -577,6 +584,7 @@ export default function MapView() {
             facility={selFac}
             vehicle={selVeh}
             complaint={selCmp as MapComplaint | undefined}
+            landmark={selLm?.id}
             onClose={() => setSelected(null)}
             onPath={startPath}
             onWorkshop={(f: MapFacility) => router.push(`/workshop?facility=${f.id}`)}
@@ -644,6 +652,43 @@ function buildLayers(L: Live, truckMesh: ReturnType<typeof buildTruckMesh>, vs: 
   const bg: [number, number, number, number] = dark ? [15, 23, 42, 220] : [255, 255, 255, 230];
   const pathMode = !!L.path;
   const sel = L.selected;
+
+  if (L.layers.landmarks) {
+    const meshes = shapeMeshes();
+    (Object.keys(meshes) as Shape[]).forEach((shape) => {
+      out.push(
+        new SimpleMeshLayer({
+          id: `lm-${shape}`,
+          data: PART_INSTANCES.filter((p) => p.shape === shape),
+          mesh: meshes[shape] as AnyLayer,
+          pickable: true,
+          getPosition: (p: (typeof PART_INSTANCES)[number]) => p.pos,
+          getScale: (p: (typeof PART_INSTANCES)[number]) => p.scale,
+          getColor: (p: (typeof PART_INSTANCES)[number]) => rgba(p.color),
+          material: { ambient: 0.55, diffuse: 0.8, shininess: 40 },
+        }),
+      );
+    });
+    out.push(
+      new TextLayer({
+        id: 'lm-labels',
+        data: LANDMARKS,
+        getPosition: (l: (typeof LANDMARKS)[number]) => [l.lon, l.lat, l.height + 15],
+        getText: (l: (typeof LANDMARKS)[number]) => L.landmarkName(l.id),
+        getSize: 13,
+        getColor: textColor,
+        background: true,
+        getBackgroundColor: bg,
+        backgroundPadding: [5, 3],
+        characterSet: 'auto',
+        fontWeight: 700,
+        billboard: true,
+        parameters: { depthCompare: 'always' },
+        visible: L.zoom > 12.3,
+        updateTriggers: { getText: [L.landmarkName] },
+      }),
+    );
+  }
 
   if (L.layers.heat) {
     out.push(
