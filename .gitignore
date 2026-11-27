@@ -38,3 +38,4 @@ ai/data/
 ai/runs/
 db/supabase/.temp/
 db/supabase/.branches/
+simulator/data/routes-cache.json

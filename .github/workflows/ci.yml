@@ -127,3 +127,50 @@ jobs:
             ${{ env.IMAGE }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'pr' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  simulator:
+    name: Симулятор · тесты и e2e на Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck и юнит-тесты симулятора
+        run: npm run typecheck -w @kaida/simulator && npm test -w @kaida/simulator
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Supabase (пустая база + 7 миграций)
+        working-directory: db
+        run: supabase start -x vector,logflare,imgproxy,supavisor,mailpit,studio,postgres-meta
+      - name: Edge Function api (demo-login)
+        working-directory: db
+        run: |
+          printf 'DEMO_MODE=true\nDEMO_PASSWORD=ci-demo-password-123\n' > /tmp/fn.env
+          nohup supabase functions serve api --env-file /tmp/fn.env --no-verify-jwt > /tmp/fn.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:54321/functions/v1/api/health && break; sleep 2; done
+          curl -s http://127.0.0.1:54321/functions/v1/api/health || (cat /tmp/fn.log; exit 1)
+      - name: Одна команда → полные тестовые данные (только публичное API, anon key)
+        working-directory: db
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          cd ../simulator
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" OSRM_OFFLINE=1 \
+            node --experimental-strip-types --no-warnings src/cli.ts all --days 4
+      - name: Проверки цепочки (ТЗ 7, 14)
+        run: psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -X -f simulator/test/e2e_checks.sql
+      - name: Повторный запуск идемпотентен
+        working-directory: db
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          cd ../simulator
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" OSRM_OFFLINE=1 \
+            node --experimental-strip-types --no-warnings src/cli.ts all --days 2
+          psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -X -f test/e2e_checks.sql
+      - name: Лог функции
+        if: failure()
+        run: cat /tmp/fn.log || true

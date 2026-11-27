@@ -1,0 +1,18 @@
+{
+  "name": "@kaida/simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Тестовые данные и симулятор «Қайда?» (ТЗ 14): сиды Астаны, история за 14 дней, машины в реальном времени — через публичное API",
+  "scripts": {
+    "sim": "node --experimental-strip-types --no-warnings src/cli.ts",
+    "all": "node --experimental-strip-types --no-warnings src/cli.ts all",
+    "seed": "node --experimental-strip-types --no-warnings src/cli.ts seed",
+    "history": "node --experimental-strip-types --no-warnings src/cli.ts history",
+    "live": "node --experimental-strip-types --no-warnings src/cli.ts live",
+    "check": "node --experimental-strip-types --no-warnings src/cli.ts check",
+    "test": "node --experimental-strip-types --no-warnings --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "engines": { "node": ">=22.6" }
+}

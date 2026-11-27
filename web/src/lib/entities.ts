@@ -129,5 +129,5 @@ export const ENTITIES: Record<string, EntityConfig> = {
   },
 };
 
-export const ADMIN_TABS = ['sites', 'facilities', 'carriers', 'vehicles', 'routes', 'cities', 'districts', 'rules', 'bonus', 'users', 'qr', 'settings'] as const;
+export const ADMIN_TABS = ['sites', 'facilities', 'carriers', 'vehicles', 'routes', 'cities', 'districts', 'rules', 'bonus', 'users', 'qr', 'settings', 'simulator'] as const;
 export { ROLES };
