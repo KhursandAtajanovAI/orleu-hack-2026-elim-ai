@@ -5,9 +5,9 @@
   ],
   "runs": 5,
   "imgsz": 416,
-  "p50_ms": 48.7,
-  "p95_ms": 48.9,
-  "max_ms": 52.9,
-  "warmup_ms": 21,
+  "p50_ms": 34.8,
+  "p95_ms": 34.9,
+  "max_ms": 41.8,
+  "warmup_ms": 17,
   "meets_3s": true
 }
