@@ -54,7 +54,11 @@ export class Router {
     const key = [a, b].map((p) => p.map((v) => v.toFixed(5)).join(',')).join(';');
     if (this.cache[key]) {
       this.stats.cached++;
-      return this.cache[key];
+      const c = this.cache[key];
+      // кэш старого формата — без концевых точек
+      if (distanceM(c[c.length - 1], b) > 1) c.push(b);
+      if (distanceM(c[0], a) > 1) c.unshift(a);
+      return c;
     }
     if (this.online) {
       try {
@@ -67,7 +71,10 @@ export class Router {
           const coords = body.routes?.[0]?.geometry.coordinates;
           if (coords && coords.length >= 2) {
             this.stats.osrm++;
-            this.cache[key] = coords.map(([x, y]) => [Math.round(x * 1e6) / 1e6, Math.round(y * 1e6) / 1e6]);
+            // OSRM привязывает концы к ближайшей дороге (до объекта — сотни метров по территории):
+            // добавляем сами точки a и b — машина заезжает во двор / на площадку (geofence 300 м, проверка 100 м)
+            const road = coords.map(([x, y]) => [Math.round(x * 1e6) / 1e6, Math.round(y * 1e6) / 1e6] as LonLat);
+            this.cache[key] = [a, ...road, b];
             await new Promise((r) => setTimeout(r, 120)); // бережно к публичному серверу
             return this.cache[key];
           }
