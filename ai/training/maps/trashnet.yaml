@@ -1,0 +1,8 @@
+# TrashNet (github.com/garythung/trashnet, MIT) — классификация, 1 предмет на фото.
+# Для детектора рамка = всё фото с полями 3%; для классификатора «предмет в руке» (P1) — как есть.
+cardboard: cardboard
+glass: glass
+metal: tin_can
+paper: paper
+plastic: hard_plastic
+trash: other

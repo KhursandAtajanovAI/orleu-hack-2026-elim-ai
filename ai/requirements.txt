@@ -1,0 +1,8 @@
+# ИИ-сервис (инференс на CPU). Обучение — requirements-train.txt
+fastapi>=0.115,<1
+uvicorn[standard]>=0.32,<1
+python-multipart>=0.0.20
+onnxruntime>=1.20,<2
+numpy>=1.26,<3
+pillow>=11,<13
+pyyaml>=6

@@ -1,0 +1,12 @@
+[
+    {
+        "name": "ТОО «Таза Қала»",
+        "trips": 3,
+        "carrier_id": "60000000-0000-0000-0000-000000000001",
+        "mixed_trips": 2,
+        "missed_routes": 0,
+        "clean_trips_pct": 33.3,
+        "deviation_trips": 1,
+        "confirmed_mixed_reports": 1
+    }
+]

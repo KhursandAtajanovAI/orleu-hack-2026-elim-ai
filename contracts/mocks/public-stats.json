@@ -1,0 +1,9 @@
+{
+    "scans": 1,
+    "sites": 2,
+    "recycled_t": 0.60,
+    "collected_t": 1.00,
+    "period_days": 30,
+    "avg_cleanliness": 73.3,
+    "reports_resolved": 1
+}

@@ -1,0 +1,44 @@
+[
+    {
+        "date": "2026-11-21",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-22",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-23",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-24",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-25",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-26",
+        "collected_t": 0.000,
+        "real_recycled_t": 0.000,
+        "avg_cleanliness_pct": null
+    },
+    {
+        "date": "2026-11-27",
+        "collected_t": 1.000,
+        "real_recycled_t": 0.600,
+        "avg_cleanliness_pct": 73.8
+    }
+]

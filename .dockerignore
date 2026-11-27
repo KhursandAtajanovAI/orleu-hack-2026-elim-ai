@@ -1,0 +1,11 @@
+**/node_modules
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+ai/datasets
+ai/runs
+ai/models/*.onnx
+ai/models/*.pt
+.git
+web/.next

@@ -1,0 +1,10 @@
+# Обучение и экспорт (Colab / Kaggle / GitHub Actions CPU). Лицензия Ultralytics — AGPL-3.0 (см. README).
+ultralytics>=8.3.40
+onnx>=1.17
+onnxslim>=0.1.40
+onnxruntime>=1.20
+pycocotools>=2.0.8
+pyyaml
+pillow
+numpy
+tqdm

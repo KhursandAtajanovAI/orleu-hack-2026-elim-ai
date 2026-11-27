@@ -1,0 +1,48 @@
+name: Pages · документация API и моки
+
+# GitHub Pages: Settings → Pages → Source: GitHub Actions.
+# Публикует: /api/ — документация OpenAPI (Redoc), /openapi.yaml, /mocks/*.json, /waste-rules.json
+on:
+  push:
+    branches: [main]
+    paths: ['contracts/**', 'docs/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Сборка
+        run: |
+          mkdir -p site/api site/mocks
+          npx redocly build-docs contracts/openapi.yaml -o site/api/index.html
+          cp contracts/openapi.yaml contracts/waste-rules.json site/
+          cp contracts/mocks/*.json site/mocks/ 2>/dev/null || true
+          cp docs/pages/index.html site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

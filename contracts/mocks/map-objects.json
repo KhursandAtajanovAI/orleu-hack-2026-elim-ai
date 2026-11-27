@@ -1,0 +1,110 @@
+{
+    "sites": [
+        {
+            "id": "40000000-0000-0000-0000-000000000001",
+            "address": "пр. Кабанбай батыра, 11",
+            "qr_code": "QR-S1",
+            "location": {
+                "lat": 51.090000,
+                "lon": 71.420000
+            },
+            "district_id": "20000000-0000-0000-0000-000000000001",
+            "open_reports": 0,
+            "last_pickup_at": "2026-11-27T12:55:05.0212+00:00",
+            "container_types": [
+                "mixed",
+                "plastic"
+            ],
+            "cleanliness_score": 64.00
+        },
+        {
+            "id": "40000000-0000-0000-0000-000000000002",
+            "address": "ул. Сыганак, 25",
+            "qr_code": "QR-S2",
+            "location": {
+                "lat": 51.095000,
+                "lon": 71.430000
+            },
+            "district_id": "20000000-0000-0000-0000-000000000001",
+            "open_reports": 0,
+            "last_pickup_at": "2026-11-27T12:55:05.0212+00:00",
+            "container_types": [
+                "plastic"
+            ],
+            "cleanliness_score": 82.50
+        }
+    ],
+    "reports": [
+        {
+            "id": "a5683288-5045-4d03-b465-11c9c8d7d85d",
+            "type": "mixed",
+            "status": "confirmed",
+            "site_id": "40000000-0000-0000-0000-000000000001",
+            "location": {
+                "lat": 51.090200,
+                "lon": 71.420200
+            },
+            "photo_url": "https://x/r1.jpg",
+            "created_at": "2026-11-27T12:55:05.0212+00:00"
+        }
+    ],
+    "vehicles": [
+    ],
+    "facilities": [
+        {
+            "id": "30000000-0000-0000-0000-000000000001",
+            "name": "Сортировка",
+            "type": "sorting",
+            "address": null,
+            "location": {
+                "lat": 51.100000,
+                "lon": 71.500000
+            },
+            "week_tonnes": 1.00,
+            "capacity_tpd": null,
+            "model_3d_url": null,
+            "opening_hours": null,
+            "accepted_waste_types": [
+                "plastic",
+                "paper",
+                "glass",
+                "metal",
+                "mixed"
+            ]
+        },
+        {
+            "id": "30000000-0000-0000-0000-000000000002",
+            "name": "Полигон",
+            "type": "landfill",
+            "address": null,
+            "location": {
+                "lat": 51.050000,
+                "lon": 71.600000
+            },
+            "week_tonnes": 0.00,
+            "capacity_tpd": null,
+            "model_3d_url": null,
+            "opening_hours": null,
+            "accepted_waste_types": [
+                "mixed"
+            ]
+        },
+        {
+            "id": "30000000-0000-0000-0000-000000000003",
+            "name": "Переработчик ПЭТ",
+            "type": "recycling",
+            "address": null,
+            "location": {
+                "lat": 51.200000,
+                "lon": 71.350000
+            },
+            "week_tonnes": 0.00,
+            "capacity_tpd": null,
+            "model_3d_url": null,
+            "opening_hours": null,
+            "accepted_waste_types": [
+                "plastic"
+            ]
+        }
+    ]
+}

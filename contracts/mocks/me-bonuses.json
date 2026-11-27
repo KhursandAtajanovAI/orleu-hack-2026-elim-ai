@@ -1,0 +1,21 @@
+{
+    "balance": 110.00,
+    "transactions": [
+        {
+            "id": "ce820f80-9f54-4e80-bba5-b57ae02e54ee",
+            "amount": 50.00,
+            "source_id": "a5683288-5045-4d03-b465-11c9c8d7d85d",
+            "created_at": "2026-11-27T12:55:05.0212+00:00",
+            "description": "Подтверждённая жалоба",
+            "source_type": "report_confirmed"
+        },
+        {
+            "id": "109367fd-4178-4040-9256-9c68c7dca197",
+            "amount": 60.00,
+            "source_id": "ce1f666a-e8a5-4a5d-9661-68a41764903d",
+            "created_at": "2026-11-27T12:55:05.0212+00:00",
+            "description": "Сдача 4 кг (plastic)",
+            "source_type": "drop_off"
+        }
+    ]
+}

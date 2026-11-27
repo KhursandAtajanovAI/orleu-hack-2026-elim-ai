@@ -1,0 +1,27 @@
+{
+  "name": "Қайда? — монорепо (Codespaces)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers-extra/features/supabase-cli:1": {},
+    "ghcr.io/devcontainers-extra/features/deno:1": {}
+  },
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [3000, 4010, 8000, 54321, 54323],
+  "portsAttributes": {
+    "3000": { "label": "web (Next.js)" },
+    "4010": { "label": "мок API (Prism)" },
+    "8000": { "label": "ИИ-сервис" },
+    "54321": { "label": "Supabase API" },
+    "54323": { "label": "Supabase Studio" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["denoland.vscode-deno", "ms-python.python", "dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss", "redhat.vscode-yaml"],
+      "settings": { "deno.enablePaths": ["db/supabase/functions"] }
+    }
+  }
+}

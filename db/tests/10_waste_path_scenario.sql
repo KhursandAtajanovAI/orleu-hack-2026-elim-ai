@@ -283,4 +283,52 @@ select tests.ok((select bool_and(p.bonus_balance = coalesce((select sum(amount) 
 
 select tests.ok((select count(*) from public.training_images) = 1, 'фото с согласием на обучение попало в training_images');
 
+
+-- ------------------------------------------------ экспорт моков для фронта
+-- db/scripts/export_mocks.sh запускает этот файл с -v mocks_dir=contracts/mocks:
+-- ответы API снимаются с настоящей базы и становятся моками для потоков C, D, F.
+\if :{?mocks_dir}
+select tests.as_user('00000000-0000-0000-0000-0000000000a2');
+\pset tuples_only on
+\pset format unaligned
+\o :mocks_dir/site-path.json
+select jsonb_pretty(public.site_path('40000000-0000-0000-0000-000000000001', 7));
+\o :mocks_dir/site-path-mixed.json
+select jsonb_pretty(public.site_path('40000000-0000-0000-0000-000000000002', 7));
+\o :mocks_dir/site-by-qr.json
+select jsonb_pretty(public.site_by_qr('QR-S1'));
+\o :mocks_dir/site-card.json
+select jsonb_pretty(public.site_card('40000000-0000-0000-0000-000000000001'));
+\o :mocks_dir/map-objects.json
+select jsonb_pretty(public.map_objects(71.3, 51.0, 71.7, 51.3));
+\o :mocks_dir/trip-chain.json
+select jsonb_pretty(public.trip_chain((select v from ctx where k = 'trip1')));
+\o :mocks_dir/report.json
+select jsonb_pretty(public.report_json((select v from ctx where k = 'rep1')));
+\o :mocks_dir/dashboard-summary.json
+select jsonb_pretty(public.dashboard_summary('10000000-0000-0000-0000-000000000001'));
+\o :mocks_dir/dashboard-timeseries.json
+select jsonb_pretty(public.dashboard_timeseries('10000000-0000-0000-0000-000000000001', now() - interval '6 days'));
+\o :mocks_dir/dashboard-sites-rating.json
+select jsonb_pretty(public.dashboard_sites_rating('10000000-0000-0000-0000-000000000001'));
+\o :mocks_dir/dashboard-carriers-rating.json
+select jsonb_pretty(public.dashboard_carriers_rating('10000000-0000-0000-0000-000000000001'));
+\o :mocks_dir/public-stats.json
+select jsonb_pretty(public.public_stats());
+\o :mocks_dir/waste-rules.json
+select jsonb_pretty(public.waste_rules_list());
+select tests.as_user('00000000-0000-0000-0000-0000000000d1');
+\o :mocks_dir/driver-route-today.json
+select jsonb_pretty(public.driver_route_today());
+select tests.as_user('00000000-0000-0000-0000-0000000000f1');
+\o :mocks_dir/me.json
+select jsonb_pretty(public.me());
+\o :mocks_dir/me-bonuses.json
+select jsonb_pretty(public.me_bonuses());
+\o
+\pset tuples_only off
+\pset format aligned
+reset role;
+\endif
+
 rollback;

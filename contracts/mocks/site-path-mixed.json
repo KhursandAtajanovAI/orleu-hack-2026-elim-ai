@@ -1,0 +1,615 @@
+{
+    "site": {
+        "id": "40000000-0000-0000-0000-000000000002",
+        "address": "ул. Сыганак, 25",
+        "city_id": "10000000-0000-0000-0000-000000000001",
+        "qr_code": "QR-S2",
+        "district": {
+            "id": "20000000-0000-0000-0000-000000000001",
+            "name_kk": null,
+            "name_ru": "Есиль"
+        },
+        "location": {
+            "lat": 51.095000,
+            "lon": 71.430000
+        },
+        "last_pickup_at": "2026-11-27T12:55:05.0212+00:00",
+        "cleanliness_score": 82.50,
+        "residential_complex": null
+    },
+    "latest": {
+        "stage": 6,
+        "track": {
+            "type": "LineString",
+            "coordinates": [
+                [
+                    71.42,
+                    51.09
+                ],
+                [
+                    71.43,
+                    51.095
+                ],
+                [
+                    71.47,
+                    51.1
+                ],
+                [
+                    71.499,
+                    51.1003
+                ]
+            ]
+        },
+        "status": "finished",
+        "batches": [
+            {
+                "id": "2c3dd2c0-67db-4e44-9e4e-a0e9c561d784",
+                "status": "sorted",
+                "outputs": [
+                    {
+                        "id": "1b976866-6b01-46ec-9f3d-b56492f301d6",
+                        "site_kg": 116.67,
+                        "category": "recycled",
+                        "weight_kg": 350.00,
+                        "buyer_name": null,
+                        "destination": "recycler",
+                        "output_type": "pet",
+                        "next_batches": [
+                        ],
+                        "next_facility": {
+                            "id": "30000000-0000-0000-0000-000000000003",
+                            "name": "Переработчик ПЭТ",
+                            "type": "recycling",
+                            "address": null,
+                            "location": {
+                                "lat": 51.200000,
+                                "lon": 71.350000
+                            },
+                            "model_3d_url": null
+                        }
+                    },
+                    {
+                        "id": "c523c09d-b515-495a-8552-110a303ccb87",
+                        "site_kg": 83.33,
+                        "category": "energy",
+                        "weight_kg": 250.00,
+                        "buyer_name": null,
+                        "destination": "energy",
+                        "output_type": "rdf",
+                        "next_batches": [
+                        ],
+                        "next_facility": null
+                    },
+                    {
+                        "id": "6d4b82ec-7467-46f7-b5e1-3f9ddee46dbe",
+                        "site_kg": 50.00,
+                        "category": "recycled",
+                        "weight_kg": 150.00,
+                        "buyer_name": "ТОО Полимер",
+                        "destination": "buyer",
+                        "output_type": "hdpe",
+                        "next_batches": [
+                        ],
+                        "next_facility": null
+                    },
+                    {
+                        "id": "54739f81-2445-4922-86d8-924c0532472a",
+                        "site_kg": 50.00,
+                        "category": "landfill",
+                        "weight_kg": 150.00,
+                        "buyer_name": null,
+                        "destination": "landfill",
+                        "output_type": "landfill",
+                        "next_batches": [
+                        ],
+                        "next_facility": {
+                            "id": "30000000-0000-0000-0000-000000000002",
+                            "name": "Полигон",
+                            "type": "landfill",
+                            "address": null,
+                            "location": {
+                                "lat": 51.050000,
+                                "lon": 71.600000
+                            },
+                            "model_3d_url": null
+                        }
+                    },
+                    {
+                        "id": "c4043e08-c184-4f64-b174-30ce3e766f91",
+                        "site_kg": 33.33,
+                        "category": "recycled",
+                        "weight_kg": 100.00,
+                        "buyer_name": null,
+                        "destination": "recycler",
+                        "output_type": "film",
+                        "next_batches": [
+                        ],
+                        "next_facility": {
+                            "id": "30000000-0000-0000-0000-000000000003",
+                            "name": "Переработчик ПЭТ",
+                            "type": "recycling",
+                            "address": null,
+                            "location": {
+                                "lat": 51.200000,
+                                "lon": 71.350000
+                            },
+                            "model_3d_url": null
+                        }
+                    }
+                ],
+                "site_kg": 333.33,
+                "facility": {
+                    "id": "30000000-0000-0000-0000-000000000001",
+                    "name": "Сортировка",
+                    "type": "sorting",
+                    "address": null,
+                    "location": {
+                        "lat": 51.100000,
+                        "lon": 71.500000
+                    },
+                    "model_3d_url": null
+                },
+                "weight_kg": 1000.00,
+                "received_at": "2026-11-27T12:55:05.0212+00:00"
+            }
+        ],
+        "carrier": {
+            "id": "60000000-0000-0000-0000-000000000001",
+            "name": "ТОО «Таза Қала»"
+        },
+        "outcome": {
+            "energy_kg": 83.33,
+            "landfill_kg": 50.00,
+            "recycled_kg": 200.00
+        },
+        "pickups": [
+            {
+                "id": "8d4438d8-5adb-4d86-898d-441f55cf743a",
+                "status": "picked",
+                "site_id": "40000000-0000-0000-0000-000000000002",
+                "photo_url": "https://x/p2.jpg",
+                "picked_at": "2026-11-27T12:55:05.0212+00:00",
+                "mixed_flag": false,
+                "container_id": "50000000-0000-0000-0000-000000000021",
+                "model_version": "waste-yolo-0.1",
+                "contamination_pct": 30.00,
+                "container_waste_type": "plastic"
+            }
+        ],
+        "trip_id": "b016482a-a7e3-4f9b-84b9-4ea6770f2d22",
+        "vehicle": {
+            "id": "70000000-0000-0000-0000-000000000001",
+            "plate_number": "001 AAA 01",
+            "vehicle_type": "rear_loader"
+        },
+        "timeline": [
+            {
+                "at": null,
+                "code": "in_container",
+                "done": true,
+                "stage": 1
+            },
+            {
+                "at": "2026-11-27T12:55:05.0212+00:00",
+                "code": "picked_up",
+                "done": true,
+                "stage": 2
+            },
+            {
+                "at": "2026-11-27T12:55:05.0212+00:00",
+                "code": "in_transit",
+                "done": true,
+                "stage": 3,
+                "active": false
+            },
+            {
+                "at": "2026-11-27T12:55:05.0212+00:00",
+                "code": "received",
+                "done": true,
+                "stage": 4
+            },
+            {
+                "at": null,
+                "code": "sorted",
+                "done": true,
+                "stage": 5
+            },
+            {
+                "at": null,
+                "code": "outcome",
+                "done": true,
+                "stage": 6
+            }
+        ],
+        "mixed_flag": false,
+        "site_share": 0.3333,
+        "stage_code": "outcome",
+        "started_at": "2026-11-27T12:55:05.0212+00:00",
+        "waste_type": "plastic",
+        "finished_at": "2026-11-27T12:55:05.0212+00:00",
+        "deviation_flag": false,
+        "current_position": null,
+        "planned_facility": {
+            "id": "30000000-0000-0000-0000-000000000001",
+            "name": "Сортировка",
+            "type": "sorting",
+            "address": null,
+            "location": {
+                "lat": 51.100000,
+                "lon": 71.500000
+            },
+            "model_3d_url": null
+        },
+        "destination_facility": {
+            "id": "30000000-0000-0000-0000-000000000001",
+            "name": "Сортировка",
+            "type": "sorting",
+            "address": null,
+            "location": {
+                "lat": 51.100000,
+                "lon": 71.500000
+            },
+            "model_3d_url": null
+        }
+    },
+    "history": [
+        {
+            "stage": 6,
+            "track": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        71.42,
+                        51.09
+                    ],
+                    [
+                        71.43,
+                        51.095
+                    ],
+                    [
+                        71.47,
+                        51.1
+                    ],
+                    [
+                        71.499,
+                        51.1003
+                    ]
+                ]
+            },
+            "status": "finished",
+            "batches": [
+                {
+                    "id": "2c3dd2c0-67db-4e44-9e4e-a0e9c561d784",
+                    "status": "sorted",
+                    "outputs": [
+                        {
+                            "id": "1b976866-6b01-46ec-9f3d-b56492f301d6",
+                            "site_kg": 116.67,
+                            "category": "recycled",
+                            "weight_kg": 350.00,
+                            "buyer_name": null,
+                            "destination": "recycler",
+                            "output_type": "pet",
+                            "next_batches": [
+                            ],
+                            "next_facility": {
+                                "id": "30000000-0000-0000-0000-000000000003",
+                                "name": "Переработчик ПЭТ",
+                                "type": "recycling",
+                                "address": null,
+                                "location": {
+                                    "lat": 51.200000,
+                                    "lon": 71.350000
+                                },
+                                "model_3d_url": null
+                            }
+                        },
+                        {
+                            "id": "c523c09d-b515-495a-8552-110a303ccb87",
+                            "site_kg": 83.33,
+                            "category": "energy",
+                            "weight_kg": 250.00,
+                            "buyer_name": null,
+                            "destination": "energy",
+                            "output_type": "rdf",
+                            "next_batches": [
+                            ],
+                            "next_facility": null
+                        },
+                        {
+                            "id": "6d4b82ec-7467-46f7-b5e1-3f9ddee46dbe",
+                            "site_kg": 50.00,
+                            "category": "recycled",
+                            "weight_kg": 150.00,
+                            "buyer_name": "ТОО Полимер",
+                            "destination": "buyer",
+                            "output_type": "hdpe",
+                            "next_batches": [
+                            ],
+                            "next_facility": null
+                        },
+                        {
+                            "id": "54739f81-2445-4922-86d8-924c0532472a",
+                            "site_kg": 50.00,
+                            "category": "landfill",
+                            "weight_kg": 150.00,
+                            "buyer_name": null,
+                            "destination": "landfill",
+                            "output_type": "landfill",
+                            "next_batches": [
+                            ],
+                            "next_facility": {
+                                "id": "30000000-0000-0000-0000-000000000002",
+                                "name": "Полигон",
+                                "type": "landfill",
+                                "address": null,
+                                "location": {
+                                    "lat": 51.050000,
+                                    "lon": 71.600000
+                                },
+                                "model_3d_url": null
+                            }
+                        },
+                        {
+                            "id": "c4043e08-c184-4f64-b174-30ce3e766f91",
+                            "site_kg": 33.33,
+                            "category": "recycled",
+                            "weight_kg": 100.00,
+                            "buyer_name": null,
+                            "destination": "recycler",
+                            "output_type": "film",
+                            "next_batches": [
+                            ],
+                            "next_facility": {
+                                "id": "30000000-0000-0000-0000-000000000003",
+                                "name": "Переработчик ПЭТ",
+                                "type": "recycling",
+                                "address": null,
+                                "location": {
+                                    "lat": 51.200000,
+                                    "lon": 71.350000
+                                },
+                                "model_3d_url": null
+                            }
+                        }
+                    ],
+                    "site_kg": 333.33,
+                    "facility": {
+                        "id": "30000000-0000-0000-0000-000000000001",
+                        "name": "Сортировка",
+                        "type": "sorting",
+                        "address": null,
+                        "location": {
+                            "lat": 51.100000,
+                            "lon": 71.500000
+                        },
+                        "model_3d_url": null
+                    },
+                    "weight_kg": 1000.00,
+                    "received_at": "2026-11-27T12:55:05.0212+00:00"
+                }
+            ],
+            "carrier": {
+                "id": "60000000-0000-0000-0000-000000000001",
+                "name": "ТОО «Таза Қала»"
+            },
+            "outcome": {
+                "energy_kg": 83.33,
+                "landfill_kg": 50.00,
+                "recycled_kg": 200.00
+            },
+            "pickups": [
+                {
+                    "id": "8d4438d8-5adb-4d86-898d-441f55cf743a",
+                    "status": "picked",
+                    "site_id": "40000000-0000-0000-0000-000000000002",
+                    "photo_url": "https://x/p2.jpg",
+                    "picked_at": "2026-11-27T12:55:05.0212+00:00",
+                    "mixed_flag": false,
+                    "container_id": "50000000-0000-0000-0000-000000000021",
+                    "model_version": "waste-yolo-0.1",
+                    "contamination_pct": 30.00,
+                    "container_waste_type": "plastic"
+                }
+            ],
+            "trip_id": "b016482a-a7e3-4f9b-84b9-4ea6770f2d22",
+            "vehicle": {
+                "id": "70000000-0000-0000-0000-000000000001",
+                "plate_number": "001 AAA 01",
+                "vehicle_type": "rear_loader"
+            },
+            "timeline": [
+                {
+                    "at": null,
+                    "code": "in_container",
+                    "done": true,
+                    "stage": 1
+                },
+                {
+                    "at": "2026-11-27T12:55:05.0212+00:00",
+                    "code": "picked_up",
+                    "done": true,
+                    "stage": 2
+                },
+                {
+                    "at": "2026-11-27T12:55:05.0212+00:00",
+                    "code": "in_transit",
+                    "done": true,
+                    "stage": 3,
+                    "active": false
+                },
+                {
+                    "at": "2026-11-27T12:55:05.0212+00:00",
+                    "code": "received",
+                    "done": true,
+                    "stage": 4
+                },
+                {
+                    "at": null,
+                    "code": "sorted",
+                    "done": true,
+                    "stage": 5
+                },
+                {
+                    "at": null,
+                    "code": "outcome",
+                    "done": true,
+                    "stage": 6
+                }
+            ],
+            "mixed_flag": false,
+            "site_share": 0.3333,
+            "stage_code": "outcome",
+            "started_at": "2026-11-27T12:55:05.0212+00:00",
+            "waste_type": "plastic",
+            "finished_at": "2026-11-27T12:55:05.0212+00:00",
+            "deviation_flag": false,
+            "current_position": null,
+            "planned_facility": {
+                "id": "30000000-0000-0000-0000-000000000001",
+                "name": "Сортировка",
+                "type": "sorting",
+                "address": null,
+                "location": {
+                    "lat": 51.100000,
+                    "lon": 71.500000
+                },
+                "model_3d_url": null
+            },
+            "destination_facility": {
+                "id": "30000000-0000-0000-0000-000000000001",
+                "name": "Сортировка",
+                "type": "sorting",
+                "address": null,
+                "location": {
+                    "lat": 51.100000,
+                    "lon": 71.500000
+                },
+                "model_3d_url": null
+            }
+        },
+        {
+            "stage": 6,
+            "track": null,
+            "status": "finished",
+            "batches": [
+            ],
+            "carrier": {
+                "id": "60000000-0000-0000-0000-000000000001",
+                "name": "ТОО «Таза Қала»"
+            },
+            "outcome": {
+                "energy_kg": 0.00,
+                "landfill_kg": 0.00,
+                "recycled_kg": 0.00
+            },
+            "pickups": [
+                {
+                    "id": "8cb20f4e-793a-4a0d-b174-0b5fefdb0492",
+                    "status": "picked",
+                    "site_id": "40000000-0000-0000-0000-000000000002",
+                    "photo_url": "https://x/p4.jpg",
+                    "picked_at": "2026-11-27T12:55:05.0212+00:00",
+                    "mixed_flag": true,
+                    "container_id": "50000000-0000-0000-0000-000000000021",
+                    "model_version": null,
+                    "contamination_pct": 5.00,
+                    "container_waste_type": "plastic"
+                }
+            ],
+            "trip_id": "d5b89b83-aed4-4a07-bfd8-2ce285cfb9a3",
+            "vehicle": {
+                "id": "70000000-0000-0000-0000-000000000001",
+                "plate_number": "001 AAA 01",
+                "vehicle_type": "rear_loader"
+            },
+            "timeline": [
+                {
+                    "at": null,
+                    "code": "in_container",
+                    "done": true,
+                    "stage": 1
+                },
+                {
+                    "at": "2026-11-27T12:55:05.0212+00:00",
+                    "code": "picked_up",
+                    "done": true,
+                    "stage": 2
+                },
+                {
+                    "at": "2026-11-27T12:55:05.0212+00:00",
+                    "code": "in_transit",
+                    "done": true,
+                    "stage": 3,
+                    "active": false
+                },
+                {
+                    "at": null,
+                    "code": "received",
+                    "done": true,
+                    "stage": 4
+                },
+                {
+                    "at": null,
+                    "code": "sorted",
+                    "done": true,
+                    "stage": 5
+                },
+                {
+                    "at": null,
+                    "code": "outcome",
+                    "done": true,
+                    "stage": 6
+                }
+            ],
+            "mixed_flag": true,
+            "site_share": 1.0000,
+            "stage_code": "outcome",
+            "started_at": "2026-11-27T12:55:05.0212+00:00",
+            "waste_type": "plastic",
+            "finished_at": "2026-11-27T12:55:05.0212+00:00",
+            "deviation_flag": true,
+            "current_position": null,
+            "planned_facility": {
+                "id": "30000000-0000-0000-0000-000000000001",
+                "name": "Сортировка",
+                "type": "sorting",
+                "address": null,
+                "location": {
+                    "lat": 51.100000,
+                    "lon": 71.500000
+                },
+                "model_3d_url": null
+            },
+            "destination_facility": {
+                "id": "30000000-0000-0000-0000-000000000002",
+                "name": "Полигон",
+                "type": "landfill",
+                "address": null,
+                "location": {
+                    "lat": 51.050000,
+                    "lon": 71.600000
+                },
+                "model_3d_url": null
+            }
+        }
+    ],
+    "summary": {
+        "trips": 2,
+        "pickups": 2,
+        "site_kg": 333.33,
+        "energy_kg": 83.33,
+        "landfill_kg": 50.00,
+        "recycled_kg": 200.00,
+        "mixed_events": 1
+    },
+    "containers": [
+        {
+            "id": "50000000-0000-0000-0000-000000000021",
+            "volume_l": 1100,
+            "fill_level": 0,
+            "waste_type": "plastic"
+        }
+    ],
+    "period_days": 7
+}

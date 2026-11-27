@@ -1,0 +1,89 @@
+{
+    "date": "2026-11-27",
+    "routes": [
+        {
+            "stops": [
+                {
+                    "done": true,
+                    "order": 1,
+                    "address": "пр. Кабанбай батыра, 11",
+                    "qr_code": "QR-S1",
+                    "site_id": "40000000-0000-0000-0000-000000000001",
+                    "location": {
+                        "lat": 51.090000,
+                        "lon": 71.420000
+                    },
+                    "containers": [
+                        {
+                            "id": "50000000-0000-0000-0000-000000000011",
+                            "volume_l": 1100,
+                            "fill_level": 0,
+                            "waste_type": "plastic"
+                        }
+                    ],
+                    "pickup_status": "picked",
+                    "cleanliness_score": 64.00
+                },
+                {
+                    "done": true,
+                    "order": 2,
+                    "address": "ул. Сыганак, 25",
+                    "qr_code": "QR-S2",
+                    "site_id": "40000000-0000-0000-0000-000000000002",
+                    "location": {
+                        "lat": 51.095000,
+                        "lon": 71.430000
+                    },
+                    "containers": [
+                        {
+                            "id": "50000000-0000-0000-0000-000000000021",
+                            "volume_l": 1100,
+                            "fill_level": 0,
+                            "waste_type": "plastic"
+                        }
+                    ],
+                    "pickup_status": "picked",
+                    "cleanliness_score": 82.50
+                }
+            ],
+            "trips": [
+                {
+                    "id": "b016482a-a7e3-4f9b-84b9-4ea6770f2d22",
+                    "status": "finished",
+                    "mixed_flag": false,
+                    "started_at": "2026-11-27T12:55:05.0212+00:00",
+                    "finished_at": "2026-11-27T12:55:05.0212+00:00"
+                },
+                {
+                    "id": "d5b89b83-aed4-4a07-bfd8-2ce285cfb9a3",
+                    "status": "finished",
+                    "mixed_flag": true,
+                    "started_at": "2026-11-27T12:55:05.0212+00:00",
+                    "finished_at": "2026-11-27T12:55:05.0212+00:00"
+                }
+            ],
+            "progress": {
+                "done": 2,
+                "total": 2
+            },
+            "route_id": "80000000-0000-0000-0000-000000000001",
+            "route_date": "2026-11-27",
+            "vehicle_id": "70000000-0000-0000-0000-000000000001",
+            "waste_type": "plastic",
+            "vehicle_plate": "001 AAA 01",
+            "active_trip_id": null,
+            "planned_facility": {
+                "id": "30000000-0000-0000-0000-000000000001",
+                "name": "Сортировка",
+                "type": "sorting",
+                "address": null,
+                "location": {
+                    "lat": 51.100000,
+                    "lon": 71.500000
+                },
+                "model_3d_url": null
+            }
+        }
+    ]
+}
+
