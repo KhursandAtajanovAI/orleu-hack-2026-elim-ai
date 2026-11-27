@@ -73,6 +73,7 @@ cd ai && pytest -q                                 # 25 тестов ИИ-сер
 ```
 
 Деплой в облако (Supabase, ИИ-сервис, Pages) — [`docs/DEPLOY.md`](docs/DEPLOY.md).
+**Облачный стенд и данные подключения для команды** (URL, anon key, тестовый вход) — [`docs/CLOUD.md`](docs/CLOUD.md).
 
 ## Переменные окружения
 

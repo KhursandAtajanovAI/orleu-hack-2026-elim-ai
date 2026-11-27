@@ -47,6 +47,8 @@ import path from '@kaida/contracts/mocks/site-path.json';
 
 ## 3. Настоящий бэкенд
 
+Облачный стенд уже работает: URL, anon key и тестовый вход — в [`CLOUD.md`](CLOUD.md).
+
 ```ts
 import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
