@@ -835,3 +835,39 @@ returns void language sql security definer set search_path = public, extensions 
   insert into public.app_logs (source, level, message, context, user_id)
   values (p_source, p_level, left(p_message, 2000), coalesce(p_context, '{}'), auth.uid())
 $$;
+
+-- ============================================== списки для Edge Function
+-- security invoker: работает RLS (житель — свои жалобы, акимат — своего города)
+create or replace function public.reports_list(
+  p_status public.report_status default null, p_type public.report_type default null,
+  p_district_id uuid default null, p_limit int default 50
+) returns jsonb
+language sql stable security invoker set search_path = public, extensions as $$
+  select coalesce(jsonb_agg(public.report_json(r.id) order by r.created_at desc), '[]'::jsonb)
+  from (select r.* from public.reports r
+          left join public.sites s on s.id = r.site_id
+         where (p_status is null or r.status = p_status)
+           and (p_type is null or r.type = p_type)
+           and (p_district_id is null or s.district_id = p_district_id)
+         order by r.created_at desc
+         limit least(greatest(coalesce(p_limit, 50), 1), 500)) r
+$$;
+
+create or replace function public.report_get(p_id uuid) returns jsonb
+language plpgsql stable security invoker set search_path = public, extensions as $$
+begin
+  if not exists (select 1 from public.reports where id = p_id) then
+    perform public.api_error('NOT_FOUND', 'Жалоба не найдена');
+  end if;
+  return public.report_json(p_id);
+end $$;
+
+create or replace function public.waste_rules_list(p_city_id uuid default null) returns jsonb
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce(jsonb_agg(to_jsonb(w) - 'id' - 'created_at' - 'updated_at' - 'city_id' order by w.sort_order), '[]'::jsonb)
+  from (
+    select distinct on (ai_class) * from public.waste_rules
+     where city_id is null or city_id = p_city_id
+     order by ai_class, (city_id is null)   -- правило города важнее правила по умолчанию
+  ) w
+$$;

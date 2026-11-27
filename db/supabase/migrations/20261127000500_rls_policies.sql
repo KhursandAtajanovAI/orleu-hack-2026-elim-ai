@@ -227,3 +227,7 @@ begin
     alter publication supabase_realtime add table public.vehicle_positions, public.reports, public.pickups, public.trips, public.batches;
   end if;
 end $$;
+
+grant execute on function public.reports_list(public.report_status, public.report_type, uuid, int), public.report_get(uuid)
+  to authenticated;
+grant execute on function public.waste_rules_list(uuid) to anon, authenticated;

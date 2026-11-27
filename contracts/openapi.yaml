@@ -1,0 +1,1226 @@
+openapi: 3.1.0
+info:
+  title: «Қайда?» — API платформы
+  version: 0.1.0
+  description: |
+    Контракты API из раздела 4 ТЗ. Фиксируются первыми, чтобы фронт (потоки C, D, F)
+    работал на моках параллельно с бэкендом.
+
+    * **Бэкенд** — Supabase Edge Function `api` (`/functions/v1/api/...`). Логика —
+      в функциях PostgreSQL (`db/supabase/migrations`), доступ — через RLS.
+    * **ИИ-сервис** — отдельный FastAPI (`/ai/analyze`, `/ai/health`), вызывается бэкендом.
+    * Простые чтения/записи таблиц идут напрямую через клиент Supabase с RLS
+      (например, `supabase.from('sites').select()`), здесь их нет.
+    * Все ответы — JSON. Ошибки — `{"error": {"code", "message"}}`.
+    * Авторизация — `Authorization: Bearer <access_token Supabase>`. Для гостевых
+      методов достаточно `apikey` (anon key).
+    * Мок-сервер: `npx @stoplight/prism-cli mock contracts/openapi.yaml` → http://127.0.0.1:4010
+  license:
+    name: MIT
+servers:
+  - url: https://{project}.supabase.co/functions/v1/api
+    variables:
+      project:
+        default: your-project-ref
+  - url: http://127.0.0.1:54321/functions/v1/api
+    description: supabase start (локально / Codespaces)
+  - url: http://127.0.0.1:4010
+    description: Prism-мок по этому файлу
+tags:
+  - name: public
+    description: Гость и все роли — карта, путь, QR
+  - name: resident
+    description: Житель — фото, жалобы, бонусы
+  - name: driver
+    description: Водитель — маршрут, рейсы, GPS, вывозы
+  - name: operator
+    description: Оператор приёмки — партии, итоги, сдача жителем
+  - name: akimat
+    description: Акимат — дашборд, жалобы
+  - name: admin
+    description: Администратор — роли, QR, симулятор
+  - name: auth
+    description: Тестовый вход DEMO_MODE
+  - name: ai
+    description: Внутренний ИИ-сервис (раздел 6)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [public]
+      summary: Проверка бэкенда и доступности ИИ-сервиса
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  version: { type: string, example: 0.1.0 }
+                  demo_mode: { type: boolean }
+                  ai: { $ref: '#/components/schemas/AiHealth' }
+
+  /sites/by-qr/{code}:
+    get:
+      operationId: getSiteByQr
+      tags: [public]
+      summary: Найти площадку по QR (P0)
+      security: []
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string }, example: QR-S1 }
+      responses:
+        '200': { description: Площадка, content: { application/json: { schema: { $ref: '#/components/schemas/SiteBrief' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /sites/{id}/path:
+    get:
+      operationId: getSitePath
+      tags: [public]
+      summary: Путь отходов площадки (P0, раздел 7)
+      description: |
+        Вывозы → рейсы (с треком) → партии → итоги, с координатами. Статусы 1–6.
+        `latest` — последний вывоз (вертикальный таймлайн экрана 5.4), `history` — все рейсы за период.
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: period
+          in: query
+          schema: { type: string, pattern: '^\d{1,3}d$', default: 7d }
+          description: Период истории — 7d / 30d
+      responses:
+        '200': { description: Путь, content: { application/json: { schema: { $ref: '#/components/schemas/SitePath' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /sites/{id}/card:
+    get:
+      operationId: getSiteCard
+      tags: [public]
+      summary: Карточка «Моя площадка» для главной жителя (5.2)
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Карточка, content: { application/json: { schema: { $ref: '#/components/schemas/SiteCard' } } } }
+
+  /sites/nearest:
+    get:
+      operationId: getNearestSites
+      tags: [public]
+      summary: Ближайшие площадки (онбординг «определить по геолокации», жалоба)
+      security: []
+      parameters:
+        - { name: lon, in: query, required: true, schema: { type: number } }
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: limit, in: query, schema: { type: integer, default: 5, maximum: 50 } }
+      responses:
+        '200':
+          description: Площадки по удалённости
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SiteNearest' } } } }
+
+  /map/objects:
+    get:
+      operationId: getMapObjects
+      tags: [public]
+      summary: Площадки, объекты, машины и жалобы в границах карты (P0)
+      security: []
+      parameters:
+        - name: bbox
+          in: query
+          required: true
+          schema: { type: string }
+          example: '71.35,51.05,71.55,51.20'
+          description: minLon,minLat,maxLon,maxLat
+        - name: layers
+          in: query
+          schema: { type: string, default: 'sites,facilities,vehicles,reports' }
+      responses:
+        '200': { description: Объекты, content: { application/json: { schema: { $ref: '#/components/schemas/MapObjects' } } } }
+        '400': { $ref: '#/components/responses/Validation' }
+
+  /stats/public:
+    get:
+      operationId: getPublicStats
+      tags: [public]
+      summary: Публичная статистика для гостя
+      security: []
+      parameters:
+        - { name: city_id, in: query, schema: { type: string, format: uuid } }
+        - { name: period, in: query, schema: { type: string, default: 30d } }
+      responses:
+        '200': { description: Статистика, content: { application/json: { schema: { $ref: '#/components/schemas/PublicStats' } } } }
+
+  /waste-rules:
+    get:
+      operationId: getWasteRules
+      tags: [public]
+      summary: Справочник «класс ИИ → контейнер», подсказки ru/kk
+      security: []
+      responses:
+        '200':
+          description: Правила
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/WasteRule' } } } }
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [resident]
+      summary: Профиль текущего пользователя, роли
+      responses:
+        '200': { description: Профиль, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /scans:
+    post:
+      operationId: createScan
+      tags: [resident]
+      summary: Фото жителя → ИИ → сохранение и результат (P0)
+      description: |
+        Принимает фото + site_id/координаты, сжимает проверку, загружает фото в Storage,
+        вызывает ИИ-сервис и сохраняет `scans`. Гость может вызвать без входа — тогда
+        результат ИИ возвращается, но не сохраняется (`scan_id: null`).
+        Фото на телефоне сжимается до ≤ 1 МБ и 1280 px по длинной стороне.
+      security: [ {}, { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+                mode: { $ref: '#/components/schemas/ScanMode' }
+                container_type: { $ref: '#/components/schemas/WasteType' }
+                site_id: { type: string, format: uuid }
+                lon: { type: number }
+                lat: { type: number }
+      responses:
+        '200': { description: Результат ИИ, content: { application/json: { schema: { $ref: '#/components/schemas/ScanResult' } } } }
+        '422': { $ref: '#/components/responses/AiError' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /scans/{id}/feedback:
+    post:
+      operationId: createScanFeedback
+      tags: [resident]
+      summary: «ИИ ошибся» — правильный класс → training_images
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correct_class]
+              properties:
+                correct_class: { $ref: '#/components/schemas/AiClass' }
+                item_index: { type: integer }
+                comment: { type: string }
+      responses:
+        '200': { description: Сохранено, content: { application/json: { schema: { type: object, properties: { training_image_id: { type: string, format: uuid }, status: { type: string } } } } } }
+
+  /reports:
+    post:
+      operationId: createReport
+      tags: [resident]
+      summary: Жалоба с фото и геометкой (P0)
+      description: Площадка подставляется по ближайшей (300 м), если не указана. `client_id` — идемпотентность офлайн-очереди.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, type, lon, lat]
+              properties:
+                image: { type: string, format: binary }
+                type: { $ref: '#/components/schemas/ReportType' }
+                lon: { type: number }
+                lat: { type: number }
+                site_id: { type: string, format: uuid }
+                comment: { type: string, maxLength: 2000 }
+                client_id: { type: string }
+      responses:
+        '201': { description: Создана, content: { application/json: { schema: { $ref: '#/components/schemas/Report' } } } }
+        '400': { $ref: '#/components/responses/Validation' }
+    get:
+      operationId: listReports
+      tags: [resident, akimat]
+      summary: Мои жалобы (житель) или жалобы города (акимат) — по RLS
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReportStatus' } }
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/ReportType' } }
+        - { name: district_id, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200': { description: Список, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Report' } } } } }
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [resident, akimat]
+      summary: Карточка жалобы с историей статусов
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Жалоба, content: { application/json: { schema: { $ref: '#/components/schemas/Report' } } } }
+    patch:
+      operationId: updateReportStatus
+      tags: [akimat]
+      summary: Смена статуса жалобы акиматом (P0)
+      description: 'new → in_work → confirmed / rejected. Для rejected нужен комментарий.'
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/ReportStatus' }
+                comment: { type: string }
+      responses:
+        '200': { description: Обновлена, content: { application/json: { schema: { $ref: '#/components/schemas/Report' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /driver/route/today:
+    get:
+      operationId: getDriverRouteToday
+      tags: [driver]
+      summary: Маршрут на сегодня (P0)
+      parameters:
+        - { name: date, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Маршруты водителя, content: { application/json: { schema: { $ref: '#/components/schemas/DriverDay' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /trips:
+    post:
+      operationId: startTrip
+      tags: [driver]
+      summary: Начать рейс (P0)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                route_id: { type: string, format: uuid }
+                vehicle_id: { type: string, format: uuid }
+                waste_type: { $ref: '#/components/schemas/WasteType' }
+                started_at: { type: string, format: date-time }
+                is_simulated: { type: boolean }
+      responses:
+        '201': { description: Рейс, content: { application/json: { schema: { $ref: '#/components/schemas/TripChain' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /trips/{id}:
+    get:
+      operationId: getTrip
+      tags: [public]
+      summary: Цепочка одного рейса (для режима «Путь» на 3D-карте)
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Рейс, content: { application/json: { schema: { $ref: '#/components/schemas/TripChain' } } } }
+
+  /trips/{id}/finish:
+    post:
+      operationId: finishTrip
+      tags: [driver]
+      summary: Закончить рейс (P0) — geofence 300 м, флаги смешивания и отклонения
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { finished_at: { type: string, format: date-time } } }
+      responses:
+        '200': { description: Рейс, content: { application/json: { schema: { $ref: '#/components/schemas/TripChain' } } } }
+
+  /trips/{id}/positions:
+    post:
+      operationId: addTripPositions
+      tags: [driver]
+      summary: Пакет GPS-точек (водитель, симулятор) (P0)
+      description: Раз в 10 с, пачками при плохой связи. Повтор пачки не дублирует точки (vehicle_id + recorded_at).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [points]
+              properties:
+                points:
+                  type: array
+                  maxItems: 1000
+                  items: { $ref: '#/components/schemas/GpsPoint' }
+      responses:
+        '200':
+          description: Принято
+          content:
+            application/json:
+              schema: { type: object, properties: { trip_id: { type: string, format: uuid }, accepted: { type: integer }, received: { type: integer } } }
+
+  /pickups:
+    post:
+      operationId: createPickup
+      tags: [driver]
+      summary: Вывоз с фото → ИИ → чистота и флаг смешивания (P0)
+      description: Фото обязательно для `status=picked`. Пометки `empty`, `no_access`, `broken` — без фото.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [trip_id, container_id]
+              properties:
+                image: { type: string, format: binary }
+                trip_id: { type: string, format: uuid }
+                container_id: { type: string, format: uuid }
+                status: { $ref: '#/components/schemas/PickupStatus' }
+                fill_level: { type: integer, minimum: 0, maximum: 100 }
+                lon: { type: number }
+                lat: { type: number }
+                picked_at: { type: string, format: date-time }
+                client_id: { type: string }
+      responses:
+        '201': { description: Вывоз, content: { application/json: { schema: { $ref: '#/components/schemas/Pickup' } } } }
+
+  /facilities/{id}/arrivals:
+    get:
+      operationId: getFacilityArrivals
+      tags: [operator]
+      summary: Очередь приехавших рейсов (P1)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Рейсы, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TripChain' } } } } }
+
+  /batches:
+    post:
+      operationId: createBatch
+      tags: [operator]
+      summary: Приёмка партии (P1; P0 — через симулятор)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facility_id]
+              properties:
+                facility_id: { type: string, format: uuid }
+                trip_id: { type: string, format: uuid }
+                weight_kg: { type: number, description: нетто }
+                gross_kg: { type: number }
+                tare_kg: { type: number }
+                photo_url: { type: string }
+                received_at: { type: string, format: date-time }
+                parent_output_id: { type: string, format: uuid, description: 'партия пришла из итога другой партии' }
+      responses:
+        '201': { description: Партия, content: { application/json: { schema: { $ref: '#/components/schemas/Batch' } } } }
+
+  /batches/{id}/outputs:
+    post:
+      operationId: addBatchOutputs
+      tags: [operator]
+      summary: Итог сортировки партии (P1; P0 — через симулятор)
+      description: 'close=true закрывает партию (статус 6): сумма кг должна точно равняться весу партии.'
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outputs]
+              properties:
+                outputs: { type: array, items: { $ref: '#/components/schemas/BatchOutputInput' } }
+                close: { type: boolean, default: true }
+      responses:
+        '200': { description: Итоги, content: { application/json: { schema: { type: object, properties: { batch: { $ref: '#/components/schemas/Batch' }, outputs: { type: array, items: { $ref: '#/components/schemas/BatchOutput' } }, total_kg: { type: number } } } } } }
+
+  /facilities/{id}/daily-outputs:
+    post:
+      operationId: addDailyOutputs
+      tags: [operator]
+      summary: Суточный итог с распределением на партии пропорционально весу
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, outputs]
+              properties:
+                date: { type: string, format: date }
+                outputs: { type: array, items: { $ref: '#/components/schemas/BatchOutputInput' } }
+      responses:
+        '200': { description: OK }
+
+  /drop-offs:
+    post:
+      operationId: createDropOff
+      tags: [operator]
+      summary: Сдача вторсырья жителем по его QR → бонусы (P1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facility_id, waste_type, weight_kg]
+              properties:
+                facility_id: { type: string, format: uuid }
+                waste_type: { $ref: '#/components/schemas/WasteType' }
+                weight_kg: { type: number }
+                user_qr: { type: string, description: токен из /me/qr }
+                client_id: { type: string }
+      responses:
+        '201': { description: Сдача и бонус }
+
+  /me/bonuses:
+    get:
+      operationId: getMyBonuses
+      tags: [resident]
+      summary: Баланс и история бонусов (P1)
+      responses:
+        '200': { description: Бонусы, content: { application/json: { schema: { $ref: '#/components/schemas/Bonuses' } } } }
+
+  /me/qr:
+    get:
+      operationId: getMyQr
+      tags: [resident]
+      summary: Личный QR жителя (обновляется каждые 5 минут)
+      responses:
+        '200': { description: Токен, content: { application/json: { schema: { type: object, properties: { token: { type: string }, expires_at: { type: string, format: date-time } } } } } }
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [akimat]
+      summary: Ключевые показатели и разрыв «заявлено / реально вторсырьё» (P0)
+      parameters:
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/period'
+        - $ref: '#/components/parameters/from'
+        - $ref: '#/components/parameters/to'
+        - $ref: '#/components/parameters/district'
+        - $ref: '#/components/parameters/carrier'
+      responses:
+        '200': { description: Показатели, content: { application/json: { schema: { $ref: '#/components/schemas/DashboardSummary' } } } }
+
+  /dashboard/timeseries:
+    get:
+      operationId: getDashboardTimeseries
+      tags: [akimat]
+      summary: Вывезено и реально переработано по дням (P0)
+      parameters:
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/period'
+        - $ref: '#/components/parameters/from'
+        - $ref: '#/components/parameters/to'
+        - $ref: '#/components/parameters/district'
+        - $ref: '#/components/parameters/carrier'
+      responses:
+        '200': { description: Ряд, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TimeseriesPoint' } } } } }
+
+  /dashboard/sites-rating:
+    get:
+      operationId: getSitesRating
+      tags: [akimat]
+      summary: Рейтинг площадок (P0)
+      parameters:
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/period'
+        - $ref: '#/components/parameters/district'
+        - { name: sort, in: query, schema: { type: string, enum: [cleanliness_asc, cleanliness_desc, reports_desc, trend_asc], default: cleanliness_asc } }
+      responses:
+        '200': { description: Рейтинг, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SiteRating' } } } } }
+
+  /dashboard/carriers-rating:
+    get:
+      operationId: getCarriersRating
+      tags: [akimat]
+      summary: Рейтинг перевозчиков (P1)
+      parameters:
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/period'
+      responses:
+        '200': { description: Рейтинг, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CarrierRating' } } } } }
+
+  /admin/users/{id}/roles:
+    put:
+      operationId: setUserRoles
+      tags: [admin]
+      summary: Выдать роли пользователю
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
+                city_id: { type: string, format: uuid }
+                facility_id: { type: string, format: uuid }
+      responses:
+        '200': { description: Профиль }
+
+  /auth/demo-login:
+    post:
+      operationId: demoLogin
+      tags: [auth]
+      summary: Тестовый вход с выбором роли без пароля (только при DEMO_MODE=true)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: '#/components/schemas/Role' }
+                index: { type: integer, description: 'номер тестового аккаунта роли (житель 1..20, водитель 1..5)', default: 1 }
+      responses:
+        '200':
+          description: Сессия Supabase
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  expires_in: { type: integer }
+                  user: { type: object }
+        '403': { description: DEMO_MODE выключен }
+
+  # --------------------------------------------------------- ИИ-сервис (раздел 6)
+  /ai/health:
+    get:
+      operationId: aiHealth
+      tags: [ai]
+      summary: Проверка ИИ-сервиса и версия модели (P0)
+      servers: [ { url: 'https://ai.example.kz' }, { url: 'http://127.0.0.1:8000' } ]
+      security: []
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AiHealth' } } } }
+  /ai/analyze:
+    post:
+      operationId: aiAnalyze
+      tags: [ai]
+      summary: Анализ изображения (внутренний, P0)
+      servers: [ { url: 'https://ai.example.kz' }, { url: 'http://127.0.0.1:8000' } ]
+      security: [ { aiKey: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+                mode: { $ref: '#/components/schemas/ScanMode' }
+                container_type: { $ref: '#/components/schemas/WasteType' }
+                conf: { type: number, description: 'порог уверенности, по умолчанию 0.35' }
+      responses:
+        '200': { description: Результат, content: { application/json: { schema: { $ref: '#/components/schemas/AnalyzeResult' } } } }
+        '422': { $ref: '#/components/responses/AiError' }
+        '429': { description: Превышен лимит запросов, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    aiKey: { type: apiKey, in: header, name: X-AI-Key }
+
+  parameters:
+    city: { name: city_id, in: query, schema: { type: string, format: uuid } }
+    district: { name: district_id, in: query, schema: { type: string, format: uuid } }
+    carrier: { name: carrier_id, in: query, schema: { type: string, format: uuid } }
+    period: { name: period, in: query, schema: { type: string, enum: [today, 7d, 30d, custom], default: 7d } }
+    from: { name: from, in: query, schema: { type: string, format: date-time } }
+    to: { name: to, in: query, schema: { type: string, format: date-time } }
+
+  responses:
+    NotFound: { description: Не найдено, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: NOT_FOUND, message: Площадка не найдена } } } } }
+    Validation: { description: Ошибка данных, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: VALIDATION, message: 'bbox: minLon,minLat,maxLon,maxLat' } } } } }
+    Unauthorized: { description: Нужен вход, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: UNAUTHORIZED, message: Требуется вход } } } } }
+    Forbidden: { description: Нет прав, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: FORBIDDEN, message: 'Недостаточно прав: нужна роль driver' } } } } }
+    Conflict: { description: Конфликт состояния, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: CONFLICT, message: У машины уже есть активный рейс } } } } }
+    AiError: { description: Изображение не подходит, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: IMAGE_TOO_DARK, message: Слишком темно — включите свет или вспышку } } } } }
+    AiUnavailable: { description: ИИ недоступен, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }, example: { error: { code: AI_UNAVAILABLE, message: ИИ-сервис временно недоступен } } } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                UNAUTHORIZED, FORBIDDEN, NOT_FOUND, VALIDATION, CONFLICT, INVALID_TRANSITION,
+                PHOTO_REQUIRED, INVALID_QR, LIMIT_EXCEEDED, AI_UNAVAILABLE, IMAGE_UNREADABLE,
+                IMAGE_TOO_DARK, IMAGE_TOO_BLURRY, NOTHING_FOUND, RATE_LIMITED, DEMO_DISABLED, INTERNAL
+            message: { type: string }
+            details: {}
+
+    Role: { type: string, enum: [resident, driver, operator, akimat, admin, partner, seller] }
+    WasteType: { type: string, enum: [mixed, plastic, paper, glass, metal, organic] }
+    FacilityType: { type: string, enum: [sorting, recycling, landfill, collection_point, composting, energy] }
+    OutputType: { type: string, enum: [pet, hdpe, film, paper, cardboard, glass, metal, organic, rdf, landfill] }
+    OutputDestination: { type: string, enum: [recycler, buyer, energy, compost, landfill] }
+    OutcomeCategory: { type: string, enum: [recycled, energy, landfill] }
+    TripStatus: { type: string, enum: [planned, active, finished, cancelled] }
+    PickupStatus: { type: string, enum: [picked, empty, no_access, broken] }
+    BatchStatus: { type: string, enum: [received, sorting, sorted] }
+    ReportType: { type: string, enum: [mixed, overflow, dump, other] }
+    ReportStatus: { type: string, enum: [new, in_work, confirmed, rejected] }
+    ScanMode: { type: string, enum: [item, container] }
+    AiClass:
+      type: string
+      enum: [pet_bottle, hard_plastic, film, paper, cardboard, tetra_pak, glass, aluminum_can, tin_can, organic, textile, hazardous, other]
+    PathStage:
+      type: integer
+      minimum: 1
+      maximum: 6
+      description: '1 в контейнере · 2 вывезено · 3 в пути · 4 принято · 5 отсортировано · 6 итог'
+    PathStageCode: { type: string, enum: [in_container, picked_up, in_transit, received, sorted, outcome] }
+
+    LonLat:
+      type: object
+      required: [lon, lat]
+      properties: { lon: { type: number, example: 71.4304 }, lat: { type: number, example: 51.1282 } }
+
+    GeoJsonLineString:
+      type: object
+      properties:
+        type: { type: string, const: LineString }
+        coordinates: { type: array, items: { type: array, items: { type: number }, minItems: 2 } }
+
+    GpsPoint:
+      type: object
+      required: [lon, lat]
+      properties:
+        lon: { type: number }
+        lat: { type: number }
+        speed: { type: number, description: км/ч }
+        heading: { type: number, description: градусы }
+        recorded_at: { type: string, format: date-time }
+
+    Container:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        waste_type: { $ref: '#/components/schemas/WasteType' }
+        volume_l: { type: integer }
+        fill_level: { type: integer }
+
+    SiteBrief:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        address: { type: string, example: 'пр. Кабанбай батыра, 11' }
+        residential_complex: { type: [string, 'null'] }
+        qr_code: { type: string }
+        location: { $ref: '#/components/schemas/LonLat' }
+        cleanliness_score: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        last_pickup_at: { type: [string, 'null'], format: date-time }
+        district_id: { type: string, format: uuid }
+        containers: { type: array, items: { $ref: '#/components/schemas/Container' } }
+
+    SiteNearest:
+      allOf:
+        - $ref: '#/components/schemas/SiteBrief'
+        - type: object
+          properties: { distance_m: { type: number } }
+
+    FacilityBrief:
+      type: [object, 'null']
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/FacilityType' }
+        address: { type: [string, 'null'] }
+        location: { $ref: '#/components/schemas/LonLat' }
+        model_3d_url: { type: [string, 'null'], description: 'glTF цеха (блок E)' }
+
+    PickupInChain:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        container_id: { type: string, format: uuid }
+        site_id: { type: string, format: uuid }
+        container_waste_type: { $ref: '#/components/schemas/WasteType' }
+        status: { $ref: '#/components/schemas/PickupStatus' }
+        picked_at: { type: string, format: date-time }
+        photo_url: { type: [string, 'null'] }
+        contamination_pct: { type: [number, 'null'] }
+        mixed_flag: { type: boolean }
+        model_version: { type: [string, 'null'] }
+
+    BatchOutput:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        output_type: { $ref: '#/components/schemas/OutputType' }
+        weight_kg: { type: number }
+        site_kg: { type: number, description: 'доля площадки (правило 1)' }
+        destination: { $ref: '#/components/schemas/OutputDestination' }
+        category: { $ref: '#/components/schemas/OutcomeCategory' }
+        next_facility: { $ref: '#/components/schemas/FacilityBrief' }
+        buyer_name: { type: [string, 'null'] }
+        next_batches: { type: array, items: { type: object } }
+
+    BatchOutputInput:
+      type: object
+      required: [output_type, weight_kg]
+      properties:
+        output_type: { $ref: '#/components/schemas/OutputType' }
+        weight_kg: { type: number }
+        destination: { $ref: '#/components/schemas/OutputDestination' }
+        next_facility_id: { type: string, format: uuid }
+        buyer_name: { type: string }
+
+    BatchInChain:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        facility: { $ref: '#/components/schemas/FacilityBrief' }
+        weight_kg: { type: number }
+        site_kg: { type: number }
+        received_at: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        outputs: { type: array, items: { $ref: '#/components/schemas/BatchOutput' } }
+
+    Batch:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        trip_id: { type: [string, 'null'], format: uuid }
+        facility_id: { type: string, format: uuid }
+        weight_kg: { type: number }
+        gross_kg: { type: [number, 'null'] }
+        tare_kg: { type: [number, 'null'] }
+        received_at: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+
+    TimelineStep:
+      type: object
+      properties:
+        stage: { $ref: '#/components/schemas/PathStage' }
+        code: { $ref: '#/components/schemas/PathStageCode' }
+        done: { type: boolean }
+        active: { type: boolean }
+        at: { type: [string, 'null'], format: date-time }
+
+    Outcome:
+      type: object
+      description: 'Круговая диаграмма: вторсырьё / энергия / полигон, кг доли площадки'
+      properties:
+        recycled_kg: { type: number }
+        energy_kg: { type: number }
+        landfill_kg: { type: number }
+
+    TripChain:
+      type: object
+      properties:
+        trip_id: { type: string, format: uuid }
+        stage: { $ref: '#/components/schemas/PathStage' }
+        stage_code: { $ref: '#/components/schemas/PathStageCode' }
+        status: { $ref: '#/components/schemas/TripStatus' }
+        waste_type: { $ref: '#/components/schemas/WasteType' }
+        mixed_flag: { type: boolean, description: 'раздельный контейнер увезли в рейсе смешанных или на полигон' }
+        deviation_flag: { type: boolean, description: 'пункт назначения ≠ план маршрута' }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: [string, 'null'], format: date-time }
+        vehicle: { type: object, properties: { id: { type: string }, plate_number: { type: string }, vehicle_type: { type: string } } }
+        carrier: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        pickups: { type: array, items: { $ref: '#/components/schemas/PickupInChain' } }
+        current_position: { type: [object, 'null'], properties: { location: { $ref: '#/components/schemas/LonLat' }, speed: { type: number }, heading: { type: number }, recorded_at: { type: string } } }
+        track: { oneOf: [ { $ref: '#/components/schemas/GeoJsonLineString' }, { type: 'null' } ] }
+        planned_facility: { $ref: '#/components/schemas/FacilityBrief' }
+        destination_facility: { $ref: '#/components/schemas/FacilityBrief' }
+        site_share: { type: number, description: 'доля площадки в весе партии (правило 1)' }
+        batches: { type: array, items: { $ref: '#/components/schemas/BatchInChain' } }
+        outcome: { $ref: '#/components/schemas/Outcome' }
+        timeline: { type: array, items: { $ref: '#/components/schemas/TimelineStep' } }
+
+    SitePath:
+      type: object
+      properties:
+        site:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            address: { type: string }
+            residential_complex: { type: [string, 'null'] }
+            qr_code: { type: string }
+            location: { $ref: '#/components/schemas/LonLat' }
+            cleanliness_score: { type: [number, 'null'] }
+            last_pickup_at: { type: [string, 'null'] }
+            district: { type: object, properties: { id: { type: string }, name_ru: { type: string }, name_kk: { type: [string, 'null'] } } }
+            city_id: { type: string, format: uuid }
+        containers: { type: array, items: { $ref: '#/components/schemas/Container' } }
+        period_days: { type: integer }
+        summary:
+          type: object
+          properties:
+            trips: { type: integer }
+            pickups: { type: integer }
+            site_kg: { type: number }
+            recycled_kg: { type: number }
+            energy_kg: { type: number }
+            landfill_kg: { type: number }
+            mixed_events: { type: integer }
+        latest: { oneOf: [ { $ref: '#/components/schemas/TripChain' }, { type: 'null' } ] }
+        history: { type: array, items: { $ref: '#/components/schemas/TripChain' } }
+
+    SiteCard:
+      type: object
+      properties:
+        site: { $ref: '#/components/schemas/SiteBrief' }
+        cleanliness_score: { type: [number, 'null'] }
+        cleanliness_color: { type: string, enum: [green, yellow, red, gray] }
+        last_pickup_at: { type: [string, 'null'] }
+        last_destination: { $ref: '#/components/schemas/FacilityBrief' }
+        last_stage: { type: [integer, 'null'] }
+        month_recycled_kg: { type: number }
+        month_site_kg: { type: number }
+        top_errors: { type: array, items: { type: object, properties: { class: { $ref: '#/components/schemas/AiClass' }, label_ru: { type: string }, label_kk: { type: string }, bin: { $ref: '#/components/schemas/WasteType' }, count: { type: integer }, hint_ru: { type: string }, hint_kk: { type: string } } } }
+        tip_of_day: { type: [object, 'null'], properties: { class: { type: string }, hint_ru: { type: string }, hint_kk: { type: string } } }
+
+    MapObjects:
+      type: object
+      properties:
+        sites:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              address: { type: string }
+              qr_code: { type: string }
+              location: { $ref: '#/components/schemas/LonLat' }
+              cleanliness_score: { type: [number, 'null'] }
+              last_pickup_at: { type: [string, 'null'] }
+              district_id: { type: string }
+              container_types: { type: array, items: { $ref: '#/components/schemas/WasteType' } }
+              open_reports: { type: integer }
+        facilities:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/FacilityBrief'
+              - type: object
+                properties:
+                  accepted_waste_types: { type: array, items: { $ref: '#/components/schemas/WasteType' } }
+                  capacity_tpd: { type: [number, 'null'] }
+                  opening_hours: { type: [object, 'null'] }
+                  week_tonnes: { type: number }
+        vehicles:
+          type: array
+          items:
+            type: object
+            properties:
+              vehicle_id: { type: string, format: uuid }
+              plate_number: { type: string }
+              carrier_id: { type: string }
+              trip_id: { type: string, format: uuid }
+              waste_type: { $ref: '#/components/schemas/WasteType' }
+              mixed_flag: { type: boolean }
+              location: { $ref: '#/components/schemas/LonLat' }
+              speed: { type: [number, 'null'] }
+              heading: { type: [number, 'null'] }
+              recorded_at: { type: string, format: date-time }
+        reports:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              type: { $ref: '#/components/schemas/ReportType' }
+              status: { $ref: '#/components/schemas/ReportStatus' }
+              location: { $ref: '#/components/schemas/LonLat' }
+              photo_url: { type: string }
+              site_id: { type: [string, 'null'] }
+              created_at: { type: string, format: date-time }
+
+    PublicStats:
+      type: object
+      properties:
+        period_days: { type: integer }
+        collected_t: { type: number }
+        recycled_t: { type: number }
+        sites: { type: integer }
+        avg_cleanliness: { type: [number, 'null'] }
+        scans: { type: integer }
+        reports_resolved: { type: integer }
+
+    WasteRule:
+      type: object
+      properties:
+        ai_class: { $ref: '#/components/schemas/AiClass' }
+        label_ru: { type: string }
+        label_kk: { type: string }
+        bin: { $ref: '#/components/schemas/WasteType' }
+        is_recyclable: { type: boolean }
+        special_handling: { type: boolean }
+        hint_ru: { type: string }
+        hint_kk: { type: string }
+        usage_ru: { type: string }
+        usage_kk: { type: string }
+        icon: { type: string }
+        color: { type: string }
+
+    Me:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        full_name: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        language: { type: string, enum: [ru, kk] }
+        roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
+        home_site_id: { type: [string, 'null'], format: uuid }
+        city_id: { type: [string, 'null'] }
+        facility_id: { type: [string, 'null'] }
+        bonus_balance: { type: number }
+        consent_data: { type: boolean }
+        consent_training: { type: boolean }
+        is_demo: { type: boolean }
+        driver_vehicle_ids: { type: array, items: { type: string, format: uuid } }
+
+    AiItem:
+      type: object
+      required: [class, confidence, box]
+      properties:
+        class: { $ref: '#/components/schemas/AiClass' }
+        label_ru: { type: string }
+        label_kk: { type: string }
+        confidence: { type: number }
+        box: { type: array, items: { type: number }, minItems: 4, maxItems: 4, description: 'x1,y1,x2,y2 в пикселях исходного изображения' }
+        bin: { $ref: '#/components/schemas/WasteType' }
+        correct: { type: [boolean, 'null'], description: 'для режима контейнера: подходит ли предмет; для режима предмета — null' }
+        special_handling: { type: boolean }
+        color: { type: string }
+
+    AnalyzeResult:
+      type: object
+      required: [model_version, items, processing_ms]
+      properties:
+        model_version: { type: string, example: waste-yolo-0.1 }
+        mode: { $ref: '#/components/schemas/ScanMode' }
+        container_type: { oneOf: [ { $ref: '#/components/schemas/WasteType' }, { type: 'null' } ] }
+        image: { type: object, properties: { width: { type: integer }, height: { type: integer } } }
+        items: { type: array, items: { $ref: '#/components/schemas/AiItem' } }
+        primary: { oneOf: [ { $ref: '#/components/schemas/AiItem' }, { type: 'null' } ], description: 'режим item: самый уверенный объект' }
+        contamination_pct: { type: [number, 'null'], description: 'режим container: площадь лишних рамок / площадь всех рамок × 100' }
+        tips: { type: array, items: { type: string } }
+        quality: { type: object, properties: { brightness: { type: number }, sharpness: { type: number } } }
+        processing_ms: { type: integer }
+      example:
+        model_version: waste-yolo-0.1
+        mode: container
+        container_type: plastic
+        items:
+          - { class: pet_bottle, label_ru: ПЭТ-бутылка, confidence: 0.91, box: [120, 80, 260, 410], bin: plastic, correct: true }
+          - { class: organic, label_ru: Органика, confidence: 0.62, box: [300, 200, 380, 260], bin: organic, correct: false }
+        contamination_pct: 18
+        tips: [Сполосните бутылку, сомните и закрутите крышку]
+        processing_ms: 640
+
+    ScanResult:
+      allOf:
+        - $ref: '#/components/schemas/AnalyzeResult'
+        - type: object
+          properties:
+            scan_id: { type: [string, 'null'], format: uuid }
+            site_id: { type: [string, 'null'], format: uuid }
+            photo_url: { type: [string, 'null'] }
+
+    AiHealth:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded, down] }
+        model_version: { type: string }
+        model_loaded: { type: boolean }
+        classes: { type: array, items: { type: string } }
+        providers: { type: array, items: { type: string } }
+        conf_threshold: { type: number }
+
+    Pickup:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        trip_id: { type: string, format: uuid }
+        container_id: { type: string, format: uuid }
+        site_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/PickupStatus' }
+        photo_url: { type: [string, 'null'] }
+        ai_result: { oneOf: [ { $ref: '#/components/schemas/AnalyzeResult' }, { type: 'null' } ] }
+        contamination_pct: { type: [number, 'null'] }
+        mixed_flag: { type: boolean }
+        picked_at: { type: string, format: date-time }
+        distance_m: { type: [number, 'null'] }
+        within_radius: { type: boolean }
+        site_cleanliness_score: { type: [number, 'null'] }
+        duplicate: { type: boolean }
+
+    DriverStop:
+      type: object
+      properties:
+        order: { type: integer }
+        site_id: { type: string, format: uuid }
+        address: { type: string }
+        qr_code: { type: string }
+        location: { $ref: '#/components/schemas/LonLat' }
+        cleanliness_score: { type: [number, 'null'] }
+        containers: { type: array, items: { $ref: '#/components/schemas/Container' } }
+        done: { type: boolean }
+        pickup_status: { oneOf: [ { $ref: '#/components/schemas/PickupStatus' }, { type: 'null' } ] }
+
+    DriverDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        routes:
+          type: array
+          items:
+            type: object
+            properties:
+              route_id: { type: string, format: uuid }
+              route_date: { type: string, format: date }
+              waste_type: { $ref: '#/components/schemas/WasteType' }
+              vehicle_id: { type: string, format: uuid }
+              vehicle_plate: { type: string }
+              planned_facility: { $ref: '#/components/schemas/FacilityBrief' }
+              active_trip_id: { type: [string, 'null'], format: uuid }
+              trips: { type: array, items: { type: object } }
+              stops: { type: array, items: { $ref: '#/components/schemas/DriverStop' } }
+              progress: { type: object, properties: { total: { type: integer }, done: { type: integer } } }
+
+    Report:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: [string, 'null'] }
+        site_id: { type: [string, 'null'] }
+        type: { $ref: '#/components/schemas/ReportType' }
+        status: { $ref: '#/components/schemas/ReportStatus' }
+        photo_url: { type: string }
+        location: { $ref: '#/components/schemas/LonLat' }
+        comment: { type: [string, 'null'] }
+        status_comment: { type: [string, 'null'] }
+        related_trip_id: { type: [string, 'null'], description: 'ближайший по времени рейс' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        site: { type: [object, 'null'] }
+        history: { type: array, items: { type: object, properties: { from: { type: [string, 'null'] }, to: { type: string }, comment: { type: [string, 'null'] }, at: { type: string } } } }
+
+    Bonuses:
+      type: object
+      properties:
+        balance: { type: number }
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              amount: { type: number }
+              source_type: { type: string, enum: [drop_off, site_pool, report_confirmed, manual, redeem] }
+              source_id: { type: [string, 'null'] }
+              description: { type: [string, 'null'] }
+              created_at: { type: string, format: date-time }
+
+    DashboardMetrics:
+      type: object
+      properties:
+        collected_t: { type: number }
+        avg_cleanliness_pct: { type: [number, 'null'] }
+        claimed_recycled_t: { type: number, description: 'вес партий, принятых на сортировке (правило 5)' }
+        real_recycled_t: { type: number, description: 'итоги вторсырья, ушедшие переработчику/покупателю (правило 5)' }
+        real_recycled_pct: { type: [number, 'null'] }
+        recycling_gap_t: { type: number }
+        energy_t: { type: number }
+        landfill_t: { type: number }
+        trips: { type: integer }
+        mixed_trips: { type: integer }
+        deviation_trips: { type: integer }
+        pickups: { type: integer }
+        new_reports: { type: integer }
+        composition: { type: array, items: { type: object, properties: { output_type: { $ref: '#/components/schemas/OutputType' }, category: { $ref: '#/components/schemas/OutcomeCategory' }, kg: { type: number } } } }
+
+    DashboardSummary:
+      type: object
+      properties:
+        period: { type: object, properties: { from: { type: string, format: date-time }, to: { type: string, format: date-time } } }
+        current: { $ref: '#/components/schemas/DashboardMetrics' }
+        previous: { $ref: '#/components/schemas/DashboardMetrics' }
+        delta_pct: { type: object, additionalProperties: { type: [number, 'null'] } }
+
+    TimeseriesPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        collected_t: { type: number }
+        real_recycled_t: { type: number }
+        avg_cleanliness_pct: { type: [number, 'null'] }
+
+    SiteRating:
+      type: object
+      properties:
+        site_id: { type: string, format: uuid }
+        address: { type: string }
+        district_id: { type: string }
+        qr_code: { type: string }
+        location: { $ref: '#/components/schemas/LonLat' }
+        cleanliness_score: { type: [number, 'null'] }
+        period_cleanliness: { type: [number, 'null'] }
+        trend: { type: [number, 'null'] }
+        pickups: { type: integer }
+        mixed_pickups: { type: integer }
+        reports: { type: integer }
+        last_pickup_at: { type: [string, 'null'] }
+
+    CarrierRating:
+      type: object
+      properties:
+        carrier_id: { type: string, format: uuid }
+        name: { type: string }
+        trips: { type: integer }
+        mixed_trips: { type: integer }
+        clean_trips_pct: { type: [number, 'null'] }
+        deviation_trips: { type: integer }
+        missed_routes: { type: integer }
+        confirmed_mixed_reports: { type: integer }
