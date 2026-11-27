@@ -1,0 +1,22 @@
+{
+  "total": 619,
+  "by_source": {
+    "opf": 19,
+    "synthetic": 600
+  },
+  "by_class": {
+    "tin_can": 55,
+    "glass": 50,
+    "hard_plastic": 45,
+    "paper": 46,
+    "film": 52,
+    "cardboard": 56,
+    "pet_bottle": 37,
+    "tetra_pak": 52,
+    "aluminum_can": 46,
+    "organic": 48,
+    "textile": 31,
+    "hazardous": 46,
+    "other": 55
+  }
+}

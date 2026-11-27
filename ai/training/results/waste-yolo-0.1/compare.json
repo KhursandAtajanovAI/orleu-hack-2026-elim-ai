@@ -1,0 +1,63 @@
+{
+  "split": "test",
+  "images": 403,
+  "gt_boxes_per_class": {
+    "glass": 56,
+    "tin_can": 53,
+    "other": 127,
+    "hard_plastic": 168,
+    "film": 79,
+    "paper": 73,
+    "pet_bottle": 35,
+    "tetra_pak": 11,
+    "aluminum_can": 49,
+    "cardboard": 57,
+    "textile": 3
+  },
+  "results": [
+    {
+      "model": "исходная YOLO11n (COCO)",
+      "version": "waste-yolo-0.0-coco",
+      "class_map": "coco",
+      "mAP50": 0.0191,
+      "AP50_per_class": {
+        "pet_bottle": 0.0493,
+        "hard_plastic": 0.0507,
+        "film": 0.0,
+        "paper": 0.1028,
+        "cardboard": 0.0,
+        "tetra_pak": 0.0,
+        "glass": 0.0073,
+        "aluminum_can": 0.0,
+        "tin_can": 0.0,
+        "textile": 0.0,
+        "other": 0.0003
+      },
+      "right_bin_single_item": 0.1056,
+      "single_item_photos": 322,
+      "ms_per_image": 55.4
+    },
+    {
+      "model": "дообученная waste-yolo-0.1",
+      "version": "waste-yolo-0.1",
+      "class_map": "native",
+      "mAP50": 0.3645,
+      "AP50_per_class": {
+        "pet_bottle": 0.2697,
+        "hard_plastic": 0.447,
+        "film": 0.1778,
+        "paper": 0.8537,
+        "cardboard": 0.735,
+        "tetra_pak": 0.0242,
+        "glass": 0.6519,
+        "aluminum_can": 0.0906,
+        "tin_can": 0.6918,
+        "textile": 0.0,
+        "other": 0.068
+      },
+      "right_bin_single_item": 0.7422,
+      "single_item_photos": 322,
+      "ms_per_image": 24.2
+    }
+  ]
+}

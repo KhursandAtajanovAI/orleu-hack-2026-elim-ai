@@ -23,6 +23,9 @@ def main() -> None:
     ap.add_argument("--project", default="runs")
     ap.add_argument("--patience", type=int, default=20)
     ap.add_argument("--fraction", type=float, default=1.0, help="доля датасета (для быстрой проверки)")
+    ap.add_argument("--time", type=float, default=None, help="лимит обучения в часах (важнее epochs; для CPU в CI)")
+    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--cache", default="false", help="ram / disk / false — кэш уменьшенных фото")
     a = ap.parse_args()
 
     from ultralytics import YOLO
@@ -30,15 +33,23 @@ def main() -> None:
     model = YOLO(a.model)
     model.train(
         data=a.data, epochs=a.epochs, imgsz=a.imgsz, batch=a.batch, device=a.device,
-        project=a.project, name=a.name, patience=a.patience, fraction=a.fraction,
+        project=a.project, name=a.name, patience=a.patience, fraction=a.fraction, workers=a.workers,
+        cache={"ram": "ram", "disk": "disk"}.get(a.cache, False),
+        **({"time": a.time} if a.time else {}),
         # аугментации: освещение (HSV), масштаб/поворот, мозаика, mixup; снег/ночь — augment_weather.py
         hsv_h=0.015, hsv_s=0.6, hsv_v=0.5, degrees=10, translate=0.1, scale=0.5, fliplr=0.5,
         mosaic=1.0, mixup=0.1, close_mosaic=10, cos_lr=True, plots=True,
     )
-    metrics = model.val(data=a.data, split="val")
-    summary = {"mAP50": float(metrics.box.map50), "mAP50_95": float(metrics.box.map),
-               "per_class_mAP50": {model.names[i]: float(v) for i, v in enumerate(metrics.box.maps)},
-               "weights": str(Path(model.trainer.best))}
+    best = YOLO(str(model.trainer.best))
+    summary = {"weights": str(Path(model.trainer.best))}
+    for split in ("val", "test"):
+        m = best.val(data=a.data, split=split, imgsz=a.imgsz, plots=split == "test")
+        # ap50 — только по классам, которые есть в выборке (ap_class_index), без подстановки среднего
+        summary[split] = {"mAP50": round(float(m.box.map50), 4), "mAP50_95": round(float(m.box.map), 4),
+                          "precision": round(float(m.box.mp), 4), "recall": round(float(m.box.mr), 4),
+                          "AP50_per_class": {best.names[int(c)]: round(float(v), 4)
+                                             for c, v in zip(m.box.ap_class_index, m.box.ap50)}}
+    summary["mAP50"] = summary["test"]["mAP50"]
     out = Path(model.trainer.save_dir) / "summary.json"
     out.write_text(json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps(summary, ensure_ascii=False, indent=2))

@@ -1,0 +1,182 @@
+name: AI · дообучение и база упаковок (MVP)
+
+# Полный цикл MVP в GitHub Actions (CPU, без Kaggle):
+#  1. packages — парсер базы упаковок: Open Food Facts + Open Products Facts + синтетика
+#     → миграция 20261127000900_packages_seed.sql (применяется вместе с остальными миграциями);
+#  2. train — сбор открытых фото (TACO, TrashNet) → наши 13 классов → сплит 80/10/10 →
+#     синтетика copy-paste + снег/ночь (только train) → дообучение готовой YOLO11n (веса COCO)
+#     → экспорт ONNX → сравнение с исходной моделью на одном и том же тесте;
+#  3. publish — отчёты и сид упаковок коммитятся в ветку, модель — в GitHub Release (pre-release).
+# Быстрый режим по умолчанию (~1–1,5 ч): 0,6 ч обучения, 416 px, 500 синтетических фото.
+# Для качества: hours=3.5, imgsz=512, synth=1500.
+# Запуск: Actions → «AI · дообучение…» → Run workflow, или пуш этого файла в ветку.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Имя версии модели'
+        default: waste-yolo-0.1
+      hours:
+        description: 'Лимит обучения, часов (CPU-раннер, всего на job 6 ч)'
+        default: '0.6'
+      imgsz:
+        description: 'Размер входа при обучении'
+        default: '416'
+      synth:
+        description: 'Сколько синтетических фото добавить в train'
+        default: '500'
+  push:
+    paths: ['.github/workflows/ai-train.yml', 'ai/training/**.py', 'db/packages/**.py']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ai-train-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERSION: ${{ inputs.version || 'waste-yolo-0.1' }}
+  HOURS: ${{ inputs.hours || '0.6' }}
+  IMGSZ: ${{ inputs.imgsz || '416' }}
+  SYNTH: ${{ inputs.synth || '500' }}
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Парсер упаковок (Open Food Facts, Open Products Facts, синтетика)
+        run: |
+          python db/packages/collect_packages.py --sources off,opf,synthetic --max-pages 4 --synthetic 600 --out out/packages
+          { echo "-- =============================================================================";
+            echo "-- «Қайда?» · Миграция 9: стартовая база упаковок по штрихкоду (MVP)";
+            echo "-- Сгенерировано workflow ai-train.yml: db/packages/collect_packages.py";
+            echo "-- Источники: Open Food Facts / Open Products Facts (ODbL) и синтетика (бренды выдуманы).";
+            echo "-- =============================================================================";
+            cat out/packages/seed_packages.sql; } > out/packages/20261127000900_packages_seed.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: out/packages/
+
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Зависимости (PyTorch CPU + Ultralytics)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+          pip install -r ai/requirements-train.txt -r ai/requirements-dev.txt
+      - name: 1. Сбор открытых фото (TACO + TrashNet)
+        run: python ai/training/collect.py --out data/raw --taco --trashnet --workers 64
+      - name: 2. Наши 13 классов, сплит 80/10/10
+        run: |
+          P=ai/training/prepare.py
+          python $P taco --src data/raw/TACO/data --out data/work
+          TN=$(python -c "import json;print(json.load(open('data/raw/collect_report.json'))['trashnet'].get('root') or '')")
+          if [ -n "$TN" ] && [ "$TN" != "None" ]; then python $P trashnet --src "$TN" --out data/work; fi
+          python $P split --work data/work --out data/merged
+      - name: Уменьшить фото до 1024 px (рамки нормированы — не меняются)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps
+          n = 0
+          for p in Path('data/merged/images').rglob('*'):
+              if p.suffix.lower() not in {'.jpg', '.jpeg', '.png', '.webp'}: continue
+              im = ImageOps.exif_transpose(Image.open(p)).convert('RGB')
+              if max(im.size) > 1024:
+                  im.thumbnail((1024, 1024)); n += 1
+              im.save(p.with_suffix('.jpg'), quality=90)
+              if p.suffix.lower() != '.jpg': p.unlink()
+          print('уменьшено', n)
+          PY
+      - name: 3. Синтетика (copy-paste на фоны «Астана») + снег/ночь — только train
+        run: |
+          python ai/training/synth.py --data data/merged --n "$SYNTH"
+          python ai/training/augment_weather.py --data data/merged --fraction 0.1
+      - name: 4. Дообучение YOLO11n (веса COCO) на CPU
+        run: |
+          python ai/training/train.py --data data/merged/data.yaml --model yolo11n.pt --epochs 60 \
+            --imgsz "$IMGSZ" --batch 16 --device cpu --workers 4 --cache ram --time "$HOURS" \
+            --patience 8 --name "$VERSION" --project "$PWD/runs"
+      - name: 5. Экспорт ONNX (дообученная и исходная)
+        working-directory: ai
+        run: |
+          BEST=$(find ../runs -path "*$VERSION*/weights/best.pt" | head -1)
+          echo "BEST=$BEST"
+          python training/export.py --weights "$BEST" --version "$VERSION" --imgsz "$IMGSZ" --out models/model.onnx
+          python training/export.py --weights yolo11n.pt --version waste-yolo-0.0-coco --imgsz 640 --out models/base.onnx
+      - name: 6. Сравнение на одном тесте + скорость
+        working-directory: ai
+        run: |
+          python training/eval_compare.py --data ../data/merged --split test \
+            --model "исходная YOLO11n (COCO)=models/base.onnx:coco" \
+            --model "дообученная $VERSION=models/model.onnx:native" --out models/compare.json
+          python training/bench.py models/model.onnx --runs 5 --out models/bench.json
+      - name: Собрать отчёт
+        run: |
+          R=out/results/$VERSION; mkdir -p "$R"
+          RUN=$(dirname "$(dirname "$(find runs -path "*$VERSION*/weights/best.pt" | head -1)")")
+          cp ai/models/compare.json ai/models/bench.json ai/models/model.json "$R"/
+          for f in summary.json results.csv args.yaml results.png confusion_matrix_normalized.png BoxPR_curve.png val_batch0_pred.jpg; do
+            cp "$RUN/$f" "$R"/ 2>/dev/null || true; done
+          cp data/merged/split_report.json data/merged/synth_report.json data/raw/collect_report.json "$R"/ 2>/dev/null || true
+          mkdir -p out/model && cp ai/models/model.onnx ai/models/model.json out/model/
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          r = json.load(open(f"out/results/{os.environ['VERSION']}/compare.json"))
+          print(f"### Сравнение на тесте: {r['images']} настоящих фото\n")
+          print("| модель | mAP50 (13 классов) | правильный контейнер | мс/фото |\n|---|---|---|---|")
+          for m in r['results']:
+              print(f"| {m['model']} | {m['mAP50']} | {m['right_bin_single_item']} | {m['ms_per_image']} |")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: train-results
+          path: out/
+
+  publish:
+    needs: [packages, train]
+    if: ${{ !cancelled() && (needs.packages.result == 'success' || needs.train.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Коммит отчётов и сида упаковок в ветку
+        run: |
+          if [ -f art/packages/20261127000900_packages_seed.sql ]; then
+            cp art/packages/20261127000900_packages_seed.sql db/supabase/migrations/
+            mkdir -p db/packages/out && cp art/packages/report.json art/packages/packages.jsonl db/packages/out/
+          fi
+          if [ -d art/train-results/results ]; then
+            mkdir -p ai/training/results && cp -r art/train-results/results/* ai/training/results/
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A db
+          if [ -d ai/training/results ]; then git add -A ai/training/results; fi
+          git diff --cached --quiet || git commit -m "ИИ и упаковки: результаты дообучения $VERSION и база упаковок (ai-train.yml)"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Модель в GitHub Release (pre-release)
+        if: needs.train.result == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="model-$VERSION"
+          gh release delete "$tag" -y --cleanup-tag 2>/dev/null || true
+          gh release create "$tag" art/train-results/model/model.onnx art/train-results/model/model.json \
+            art/train-results/results/$VERSION/compare.json --target "$(git rev-parse HEAD)" \
+            --title "Модель $VERSION (дообученная YOLO11n)" --prerelease \
+            --notes "Дообучена в ai-train.yml. ИИ-сервис: MODEL_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/model.onnx, CLASS_MAP=native. Метрики — ai/training/results/$VERSION/compare.json"
