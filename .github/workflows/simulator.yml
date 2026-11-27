@@ -40,8 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # без переменных репозитория — облачный стенд из docs/CLOUD.md (anon key публичный)
+      SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://xqscpsytnferdggitdzf.supabase.co' }}
+      SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2Nwc3l0bmZlcmRnZ2l0ZHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3ODE3NTUsImV4cCI6MjExMTM1Nzc1NX0.Ki9i0rfeTUSxblDAfsdC7goNRlvRj5dAMogqMFvaJEA' }}
     steps:
       - uses: actions/checkout@v4
       - name: Проверка настроек
