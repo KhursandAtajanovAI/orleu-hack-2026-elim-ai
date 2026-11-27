@@ -30,6 +30,10 @@ export const ru = {
   'layer.cleanliness': 'Цвет по чистоте',
   'layer.heat': 'Тепловая карта чистоты',
 
+  'layer.osm': 'Здания, дороги, районы (OSM)',
+  'layer.models': '3D-модели наших объектов',
+  'map.city_loading': 'Загружаем город',
+  'map.city_failed': 'Данные города (OSM) недоступны. Запустите scripts/fetch-osm.ts для офлайн-режима.',
   'layer.landmarks': 'Достопримечательности',
   'landmark.baiterek.name': 'Байтерек',
   'landmark.baiterek.desc': 'Монумент-символ столицы, 97 м. Смотровая площадка в золотом шаре.',

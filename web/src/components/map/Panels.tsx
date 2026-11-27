@@ -35,6 +35,8 @@ export interface LayerState {
   cleanliness: boolean;
   heat: boolean;
   landmarks: boolean;
+  osm: boolean;
+  models: boolean;
 }
 
 const fmtTime = (iso?: string) =>
@@ -211,6 +213,8 @@ export function LayerPanel(props: {
     ['cleanliness', 'layer.cleanliness' as 'layer.sites'],
     ['heat', 'layer.heat' as 'layer.sites'],
     ['landmarks', 'layer.landmarks' as 'layer.sites'],
+    ['osm', 'layer.osm' as 'layer.sites'],
+    ['models', 'layer.models' as 'layer.sites'],
   ];
   return (
     <div className="glass pointer-events-auto w-[min(290px,calc(100vw-24px))] rounded-2xl shadow-lg">

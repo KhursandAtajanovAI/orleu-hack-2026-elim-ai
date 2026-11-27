@@ -33,6 +33,10 @@ import {
   rgba,
 } from './constants';
 import { buildTruckMesh } from './truckMesh';
+import { OsmLoader } from '@/lib/osm/loader';
+import { centroid, type Feat } from '@/lib/osm/convert';
+import { addOsmLayers, refreshOsmSources, setOsmVisible } from './osmLayers';
+import { facilityInstances, siteInstances } from './models';
 import { LANDMARKS, PART_INSTANCES, landmarkName, shapeMeshes, type Shape } from './landmarks';
 import { LayerPanel, ObjectCard, PathPanel, type LayerState, type Selection } from './Panels';
 
@@ -84,6 +88,7 @@ interface Live {
   path: PathAnim | null;
   pathT: number;
   landmarkName: (id: string) => string;
+  osmLabels: Array<{ name: string; pos: [number, number, number]; big: boolean }>;
 }
 
 export default function MapView() {
@@ -103,8 +108,11 @@ export default function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [offlineBase, setOfflineBase] = useState(false);
   const [layers, setLayers] = useState<LayerState>({
-    sites: true, facilities: true, vehicles: true, complaints: true, cleanliness: true, heat: false, landmarks: true,
+    sites: true, facilities: true, vehicles: true, complaints: true, cleanliness: true, heat: false, landmarks: true, osm: true, models: true,
   });
+  const osm = useRef<OsmLoader | null>(null);
+  if (!osm.current && typeof window !== 'undefined') osm.current = new OsmLoader();
+  const [osmStats, setOsmStats] = useState({ total: 0, done: 0, failed: 0, mode: 'unknown' as string });
   const [layersOpen, setLayersOpen] = useState(false);
   const [selected, setSelected] = useState<Selection | null>(null);
   const [mobile, setMobile] = useState(false);
@@ -115,7 +123,7 @@ export default function MapView() {
   const [mapReady, setMapReady] = useState(false);
 
   const live = useRef<Live>({
-    data: null, layers, theme: 'dark', selected: null, mobile: false, zoom: 12, path: null, pathT: 0, landmarkName: (id) => id,
+    data: null, layers, theme: 'dark', selected: null, mobile: false, zoom: 12, path: null, pathT: 0, landmarkName: (id) => id, osmLabels: [],
   });
   live.current.data = data;
   live.current.layers = layers;
@@ -194,7 +202,7 @@ export default function MapView() {
       bearing: -15,
       maxPitch: isMobile ? 45 : 60,
       canvasContextAttributes: { antialias: true },
-      attributionControl: { compact: true },
+      attributionControl: { compact: true, customAttribution: '© OpenStreetMap contributors' },
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
@@ -210,6 +218,8 @@ export default function MapView() {
         else if (id === 'sites-3d') setSelected({ kind: 'site', id: o.id });
         else if (id === 'vehicles' || id === 'vehicles-flat') setSelected({ kind: 'vehicle', id: o.id });
         else if (id === 'complaints') setSelected({ kind: 'complaint', id: o.id });
+        else if (id.startsWith('fm-')) setSelected({ kind: 'facility', id: (o as unknown as { lid: string }).lid });
+        else if (id.startsWith('sm-')) setSelected({ kind: 'site', id: (o as unknown as { lid: string }).lid });
         else if (id.startsWith('lm-')) setSelected({ kind: 'landmark', id: (o as unknown as { lid: string }).lid });
       },
       onHover: (info) => {
@@ -248,6 +258,8 @@ export default function MapView() {
           firstSymbol,
         );
       }
+
+      if (osm.current) addOsmLayers(map, isDark, firstSymbol, osm.current, live.current.layers.osm);
 
       if (!map.getSource('sites')) {
         map.addSource('sites', {
@@ -314,6 +326,23 @@ export default function MapView() {
       }
     });
 
+    const loader = osm.current;
+    const kick = () => {
+      const b = map.getBounds();
+      loader?.update([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], [map.getCenter().lng, map.getCenter().lat], map.getZoom());
+    };
+    const onLoaderChange = () => {
+      if (!loader || !map.isStyleLoaded()) return;
+      refreshOsmSources(map, loader);
+      setOsmStats(loader.stats());
+      const hasB = loader.collection('buildings').features.length > 0;
+      // как только есть свои OSM-здания — прячем здания тайлов, чтобы не было двойной геометрии
+      if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d', 'visibility', hasB && live.current.layers.osm ? 'none' : 'visible');
+      live.current.osmLabels = buildOsmLabels(loader);
+    };
+    loader?.listeners.add(onLoaderChange);
+    map.on('moveend', kick);
+    map.on('load', kick);
     const onZoom = () => (live.current.zoom = map.getZoom());
     map.on('zoom', onZoom);
 
@@ -341,6 +370,7 @@ export default function MapView() {
     }
 
     return () => {
+      loader?.listeners.delete(onLoaderChange);
       map.remove();
       mapRef.current = null;
       overlayRef.current = null;
@@ -379,6 +409,8 @@ export default function MapView() {
     for (const id of ['sites-clusters', 'sites-cluster-count', 'sites-point']) {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
     }
+    setOsmVisible(map, layers.osm);
+    if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d', 'visibility', layers.osm && (osm.current?.collection('buildings').features.length ?? 0) > 0 ? 'none' : 'visible');
     if (map.getLayer('sites-point')) map.setPaintProperty('sites-point', 'circle-color', cleanExpr(layers.cleanliness) as never);
   }, [layers, mapReady, theme]);
 
@@ -570,6 +602,17 @@ export default function MapView() {
             {t('map.mobile_hint')}
           </div>
         )}
+        {osmStats.total > 0 && osmStats.done < osmStats.total && (
+          <div className="glass pointer-events-auto flex w-fit items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] text-muted">
+            <span className="h-1.5 w-24 overflow-hidden rounded-full bg-line">
+              <span className="block h-full bg-brand" style={{ width: `${(osmStats.done / osmStats.total) * 100}%` }} />
+            </span>
+            {t('map.city_loading')} {osmStats.done}/{osmStats.total}
+          </div>
+        )}
+        {osmStats.failed > 0 && osmStats.done === 0 && (
+          <div className="glass pointer-events-auto w-fit max-w-[300px] rounded-xl px-3 py-1.5 text-[11px] text-amber-500">{t('map.city_failed')}</div>
+        )}
         {(error || offlineBase) && (
           <div className="glass pointer-events-auto w-fit rounded-xl px-3 py-1.5 text-xs text-amber-500">
             {error ? `${t('map.error')}: ${error}` : 'Подложка недоступна (нет сети) — показаны только слои платформы'}
@@ -722,11 +765,74 @@ function buildLayers(L: Live, truckMesh: ReturnType<typeof buildTruckMesh>, vs: 
     );
   }
 
+  if (L.layers.facilities && L.layers.models && L.zoom >= 13) {
+    const meshes = shapeMeshes();
+    const inst = facilityInstances(d.facilities);
+    (Object.keys(meshes) as Shape[]).forEach((shape) => {
+      out.push(
+        new SimpleMeshLayer({
+          id: `fm-${shape}`,
+          data: inst.filter((p) => p.shape === shape),
+          mesh: meshes[shape] as AnyLayer,
+          pickable: true,
+          getPosition: (p: (typeof inst)[number]) => p.pos,
+          getScale: (p: (typeof inst)[number]) => p.scale,
+          getColor: (p: (typeof inst)[number]) => rgba(p.color),
+          material: { ambient: 0.55, diffuse: 0.8, shininess: 30 },
+          updateTriggers: { data: [d.facilities] },
+        }),
+      );
+    });
+  }
+
+  if (L.layers.sites && L.layers.models && !L.mobile && L.zoom >= 16) {
+    const meshes = shapeMeshes();
+    const inst = siteInstances(d.sites);
+    (['box'] as Shape[]).forEach((shape) => {
+      out.push(
+        new SimpleMeshLayer({
+          id: `sm-${shape}`,
+          data: inst.filter((p) => p.shape === shape),
+          mesh: meshes[shape] as AnyLayer,
+          pickable: true,
+          getPosition: (p: (typeof inst)[number]) => p.pos,
+          getScale: (p: (typeof inst)[number]) => p.scale,
+          getColor: (p: (typeof inst)[number]) => rgba(p.color),
+          material: { ambient: 0.6, diffuse: 0.8, shininess: 20 },
+        }),
+      );
+    });
+  }
+
+  if (L.layers.osm && L.osmLabels.length) {
+    out.push(
+      new TextLayer({
+        id: 'osm-labels',
+        data: L.osmLabels.filter((l) => (l.big ? L.zoom > 13.8 : L.zoom > 16)),
+        getPosition: (l: (typeof L.osmLabels)[number]) => l.pos,
+        getText: (l: (typeof L.osmLabels)[number]) => l.name,
+        getSize: 11,
+        getColor: textColor,
+        background: true,
+        getBackgroundColor: bg,
+        backgroundPadding: [4, 2],
+        characterSet: 'auto',
+        fontWeight: 600,
+        billboard: true,
+        maxWidth: 200,
+        wordBreak: 'break-word',
+        parameters: { depthCompare: 'always' },
+        updateTriggers: { data: [L.osmLabels, L.zoom > 16] },
+      }),
+    );
+  }
+
   if (L.layers.facilities) {
     out.push(
       new ColumnLayer({
         id: 'facilities',
         data: d.facilities,
+        visible: !(L.layers.models && L.zoom >= 14),
         pickable: true,
         extruded: true,
         diskResolution: 6,
@@ -910,6 +1016,26 @@ function buildLayers(L: Live, truckMesh: ReturnType<typeof buildTruckMesh>, vs: 
       }),
     );
   }
+  return out;
+}
+
+function buildOsmLabels(loader: OsmLoader) {
+  const out: Array<{ name: string; pos: [number, number, number]; big: boolean }> = [];
+  const take = (kind: 'buildings' | 'areas' | 'points', big: boolean, zOff: (f: Feat) => number, limit: number) => {
+    let n = 0;
+    for (const f of loader.collection(kind).features) {
+      const name = f.properties.name as string | undefined;
+      if (!name || n >= limit) continue;
+      if (kind === 'areas' && !['residential', 'landfill', 'waste', 'industrial'].includes(String(f.properties.kind))) continue;
+      const c = f.geometry.type === 'Point' ? f.geometry.coordinates : f.geometry.type === 'Polygon' ? centroid(f.geometry.coordinates[0]) : null;
+      if (!c) continue;
+      out.push({ name, pos: [c[0], c[1], zOff(f)], big });
+      n++;
+    }
+  };
+  take('areas', true, () => 5, 250);
+  take('points', true, () => 20, 100);
+  take('buildings', false, (f) => Number(f.properties.h ?? 10) + 8, 500);
   return out;
 }
 
