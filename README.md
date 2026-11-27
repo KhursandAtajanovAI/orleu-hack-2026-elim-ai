@@ -16,22 +16,38 @@
 Одно приложение (PWA: сайт + телефон), роли: гость, житель, водитель, оператор приёмки,
 акимат, администратор.
 
-**Что уже работает (этап 1 — блоки A и B):**
-
-| Блок | Что сделано | Где |
-|---|---|---|
-| **A · бэкенд и данные** | Схема PostgreSQL + PostGIS (27 таблиц), роли и RLS, логика пути отходов (статусы 1–6, правила 1–5 раздела 7), 40+ методов API, Edge Function REST API, тестовый вход DEMO_MODE, админка справочников с картой и QR-наклейками | [`db/`](db), [`web/`](web) |
-| **B · ИИ** | ИИ-сервис FastAPI + ONNX Runtime в Docker: детекция, фильтр уверенности, waste_rules, % загрязнения, проверка яркости/резкости, очередь и лимит частоты; пайплайн обучения YOLO (TACO + TrashNet + Roboflow → 13 классов, 80/10/10, снег/ночь, экспорт ONNX, бенчмарк CPU) | [`ai/`](ai) |
-| **Контракты** | OpenAPI 3.1, типы TypeScript, типизированный клиент, 16 моков, снятых с настоящей базы — фронт (потоки C, D, F) работает на моках параллельно | [`contracts/`](contracts) |
-| **CI/CD** | GitHub Actions: SQL-тесты на PostGIS, тесты API и ИИ, сборка веба, Docker → GHCR, релиз модели, GitHub Pages, автодеплой Supabase из main; Codespaces | [`.github/`](.github), [`.devcontainer/`](.devcontainer) |
-
-Подробный отчёт по пунктам ТЗ — [`docs/STAGE1_REPORT.md`](docs/STAGE1_REPORT.md).
-
 ## Демо
 
-* Документация API и моки: https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/api/ (после включения Pages)
-* Веб-приложение (PWA): https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/
-* Образ ИИ-сервиса: `ghcr.io/khursandatajanovai/kaida-ai:latest`
+**Сайт (PWA):** https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/ — «Войти» → любая демо-роль, пароль не нужен.
+Данные — облачный стенд Supabase, наполненный симулятором (14 дней истории Астаны, машины в реальном времени).
+
+| Роль | Экран | Что посмотреть |
+|---|---|---|
+| Гость / житель | [`/scan/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/scan/) | Фото → **наша модель waste-yolo прямо в браузере** → контейнер и во что перерабатывается; проверка контейнера (% загрязнения); штрихкод → база 619 упаковок; жалоба с фото и местом |
+| Гость | `/s/<QR-код>` | Наклейка на контейнере → путь отходов этого двора: шаги 1–6, рейс, объект, итог в кг |
+| Все | [`/map/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/map/), [`/workshop/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/workshop/) | 3D-карта Астаны с машинами и потоками, 3D-цех сортировки |
+| Житель | [`/bonuses/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/bonuses/), [`/shop/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/shop/) | Баланс, личный QR (меняется каждые 5 мин), история; магазин и промокоды партнёров |
+| Все | [`/recycling/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/recycling/), [`/market/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/market/) | Справочник «куда сдать»; B2B-маркетплейс вторсырья с происхождением партий |
+| Водитель | [`/driver/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/driver/) | Маршрут, GPS, фото на площадке → «Вывезено», офлайн-очередь |
+| Оператор | [`/operator/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/operator/) | Очередь машин, приёмка партии, итог сортировки, сдача жителя по QR → бонусы |
+| Акимат | [`/dashboard/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/dashboard/) | Разрыв «заявлено / реально», рейтинги площадок и перевозчиков, жалобы, Excel/PDF |
+| Админ | [`/admin/`](https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/admin/) | Справочники, роли, QR-наклейки, пульт симулятора, выплаты бонусов |
+
+* Документация API и моки: https://khursandatajanovai.github.io/orleu-hack-2026-elim-ai/api/
+* Модель: релиз [`model-waste-yolo-0.1`](https://github.com/KhursandAtajanovAI/orleu-hack-2026-elim-ai/releases/tag/model-waste-yolo-0.1) — YOLO11n, дообучена на TACO + TrashNet + синтетике, 13 классов, mAP50 0,39–0,42 на тесте, 74% правильного контейнера ([отчёт](docs/AI_MVP_REPORT.md))
+* Образ ИИ-сервиса (серверный вариант той же модели): `ghcr.io/khursandatajanovai/kaida-ai:latest`
+
+## Что сделано (по блокам ТЗ)
+
+| Блок | Что сделано | Отчёт |
+|---|---|---|
+| **A · бэкенд и данные** | PostgreSQL + PostGIS, роли и RLS, путь отходов (статусы 1–6, правила раздела 7), 90+ функций БД и RPC, Edge Function REST API, демо-вход | [STAGE1](docs/STAGE1_REPORT.md) |
+| **B · ИИ** | Пайплайн обучения, дообученная модель, ИИ-сервис FastAPI + ONNX; распознавание в браузере (onnxruntime-web); база упаковок по штрихкоду | [AI_MVP](docs/AI_MVP_REPORT.md) |
+| **C · житель** | Фото → контейнер, проверка контейнера, штрихкод, жалоба, страница площадки по QR | [FINAL](docs/FINAL_REPORT.md) |
+| **D, E · 3D** | 3D-карта с машинами и потоками, 3D-цех сортировки — на живых данных | [FINAL](docs/FINAL_REPORT.md) |
+| **F · кабинеты** | Дашборд акимата и жалобы, кабинет водителя, кабинет оператора | [STAGE3](docs/STAGE3_REPORT.md) |
+| **G · бонусы и маркетплейсы** | Пул дома, магазин, B2B-маркетплейс, справочник, выплаты | [STAGE4](docs/STAGE4_REPORT.md) |
+| **H · симулятор** | Сиды Астаны, история за N дней, машины в реальном времени по дорогам OSRM — в GitHub Actions | [STAGE1](docs/STAGE1_REPORT.md) |
 
 ## Стек
 
@@ -44,7 +60,7 @@
 | Контракты | OpenAPI 3.1, openapi-typescript, Redoc, Prism (моки) |
 | Инфраструктура | GitHub Actions, GHCR, GitHub Pages, GitHub Releases (веса модели), Codespaces |
 
-Внешних платных API нет: ИИ — собственная модель на своём сервере.
+Внешних платных API нет: ИИ — собственная модель, работает прямо в браузере (onnxruntime-web) или на своём сервере.
 
 ## Как запустить
 

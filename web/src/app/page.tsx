@@ -8,7 +8,7 @@ import { configured, supabase } from '@/lib/supabase';
 
 /** Главная: меню зависит от роли (ТЗ 2). Модули потоков C/D/E/F подключаются сюда. */
 const MODULES: { key: string; roles: Role[] | 'all'; href?: string }[] = [
-  { key: 'resident', roles: 'all' },
+  { key: 'resident', roles: 'all', href: '/scan/' },
   { key: 'map', roles: 'all', href: '/map/' },
   { key: 'workshop', roles: 'all', href: '/workshop/' },
   { key: 'bonuses', roles: 'all', href: '/bonuses/' },
