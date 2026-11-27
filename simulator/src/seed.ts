@@ -35,9 +35,9 @@ export function localDate(t: number): string {
 export async function loginAll(api: Api): Promise<World> {
   const admin = await api.login('admin', 1);
   const akimat = await api.login('akimat', 1);
-  const drivers = await pool(Array.from({ length: ACCOUNTS.driver }, (_, i) => i + 1), 3, (i) => api.login('driver', i));
-  const operators = await pool(Array.from({ length: ACCOUNTS.operator }, (_, i) => i + 1), 3, (i) => api.login('operator', i));
-  const residents = await pool(Array.from({ length: ACCOUNTS.resident }, (_, i) => i + 1), 4, (i) => api.login('resident', i));
+  const drivers = await pool(Array.from({ length: ACCOUNTS.driver }, (_, i) => i + 1), 1, (i) => api.login('driver', i));
+  const operators = await pool(Array.from({ length: ACCOUNTS.operator }, (_, i) => i + 1), 1, (i) => api.login('operator', i));
+  const residents = await pool(Array.from({ length: ACCOUNTS.resident }, (_, i) => i + 1), 1, (i) => api.login('resident', i));
   return { admin, akimat, drivers, operators, residents };
 }
 

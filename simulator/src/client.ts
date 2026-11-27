@@ -107,7 +107,7 @@ export class Api {
     let s: Session | null = null;
     if (this.edgeOk !== false) {
       try {
-        const r = (await request(this.cfg, 'POST', `${this.cfg.apiUrl}/auth/demo-login`, null, { role, index })) as {
+        const r = (await this.withAuthRetry(() => request(this.cfg, 'POST', `${this.cfg.apiUrl}/auth/demo-login`, null, { role, index }))) as {
           access_token: string; user: { id: string; email: string };
         };
         s = { token: r.access_token, userId: r.user.id, email: r.user.email, role, index };
@@ -121,6 +121,24 @@ export class Api {
     if (!s) s = await this.localDemoLogin(role, index);
     this.sessions.set(key, s);
     return s;
+  }
+
+  /**
+   * Supabase Auth ограничивает входы (по умолчанию 30 за 5 минут с одного IP — а demo-login
+   * ходит с IP Edge Function). Симулятору нужно ~30 аккаунтов, поэтому при «rate limit»
+   * ждём и повторяем (до ~6 минут). Лимит можно поднять: Dashboard → Authentication → Rate Limits.
+   */
+  private async withAuthRetry<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (attempt >= 6 || !/rate limit|too many|429/i.test(String((e as Error).message) + ' ' + (e as ApiError).status)) throw e;
+        const wait = 60_000;
+        console.warn(`лимит входов Supabase Auth — жду ${wait / 1000} с и повторяю (${attempt + 1}/6)`);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
   }
 
   /** То же, что demo-login в Edge Function (db/supabase/functions/api/index.ts) */
