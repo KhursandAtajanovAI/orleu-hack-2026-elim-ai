@@ -85,7 +85,7 @@ def yolo_line(cls: str, x: float, y: float, w: float, h: float, iw: float, ih: f
 # ---------------------------------------------------------------- TACO (COCO)
 def prep_taco(src: Path, out: Path, name: str = "taco") -> Counter:
     m = load_map("taco")
-    ann_file = next((p for p in [src / "annotations.json", *src.glob("*.json")] if p.exists()), None)
+    ann_file = next((p for p in [src / "annotations_merged.json", src / "annotations.json", *src.glob("*.json")] if p.exists()), None)
     if not ann_file:
         sys.exit(f"нет annotations.json в {src}")
     coco = json.loads(ann_file.read_text(encoding="utf-8"))
