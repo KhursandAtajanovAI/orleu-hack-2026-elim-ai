@@ -1,22 +1,23 @@
 {
-  "total": 619,
+  "total": 670,
   "by_source": {
+    "off": 51,
     "opf": 19,
     "synthetic": 600
   },
   "by_class": {
-    "tin_can": 55,
-    "glass": 50,
-    "hard_plastic": 45,
-    "paper": 46,
-    "film": 52,
-    "cardboard": 56,
-    "pet_bottle": 37,
-    "tetra_pak": 52,
-    "aluminum_can": 46,
+    "pet_bottle": 47,
+    "hard_plastic": 66,
+    "cardboard": 58,
+    "tin_can": 58,
+    "glass": 54,
+    "paper": 49,
+    "aluminum_can": 47,
+    "other": 56,
+    "film": 55,
+    "tetra_pak": 55,
     "organic": 48,
     "textile": 31,
-    "hazardous": 46,
-    "other": 55
+    "hazardous": 46
   }
 }

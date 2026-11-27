@@ -1,43 +1,43 @@
 {
   "weights": "/home/runner/work/orleu-hack-2026-elim-ai/orleu-hack-2026-elim-ai/runs/waste-yolo-0.1/weights/best.pt",
   "val": {
-    "mAP50": 0.3983,
-    "mAP50_95": 0.3465,
-    "precision": 0.5392,
-    "recall": 0.3845,
+    "mAP50": 0.3751,
+    "mAP50_95": 0.3185,
+    "precision": 0.481,
+    "recall": 0.3452,
     "AP50_per_class": {
-      "pet_bottle": 0.2976,
-      "hard_plastic": 0.3519,
-      "film": 0.2263,
-      "paper": 0.7262,
-      "cardboard": 0.6923,
-      "tetra_pak": 0.4001,
-      "glass": 0.855,
-      "aluminum_can": 0.2253,
-      "tin_can": 0.7198,
-      "organic": 0.025,
-      "textile": 0.0,
-      "other": 0.26
+      "pet_bottle": 0.15,
+      "hard_plastic": 0.3227,
+      "film": 0.2134,
+      "paper": 0.7125,
+      "cardboard": 0.683,
+      "tetra_pak": 0.3208,
+      "glass": 0.8377,
+      "aluminum_can": 0.1513,
+      "tin_can": 0.6815,
+      "organic": 0.2,
+      "textile": 0.0017,
+      "other": 0.2262
     }
   },
   "test": {
-    "mAP50": 0.4245,
-    "mAP50_95": 0.3794,
-    "precision": 0.5192,
-    "recall": 0.3986,
+    "mAP50": 0.3917,
+    "mAP50_95": 0.3494,
+    "precision": 0.4955,
+    "recall": 0.3904,
     "AP50_per_class": {
-      "pet_bottle": 0.3675,
-      "hard_plastic": 0.4582,
-      "film": 0.282,
-      "paper": 0.9168,
-      "cardboard": 0.7935,
-      "tetra_pak": 0.1172,
-      "glass": 0.6984,
-      "aluminum_can": 0.1491,
-      "tin_can": 0.771,
+      "pet_bottle": 0.2781,
+      "hard_plastic": 0.4816,
+      "film": 0.1909,
+      "paper": 0.9037,
+      "cardboard": 0.7479,
+      "tetra_pak": 0.0498,
+      "glass": 0.6923,
+      "aluminum_can": 0.1272,
+      "tin_can": 0.7545,
       "textile": 0.0,
-      "other": 0.1162
+      "other": 0.0822
     }
   },
-  "mAP50": 0.4245
+  "mAP50": 0.3917
 }

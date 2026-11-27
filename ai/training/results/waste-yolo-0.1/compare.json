@@ -35,29 +35,29 @@
       },
       "right_bin_single_item": 0.1056,
       "single_item_photos": 322,
-      "ms_per_image": 26.6
+      "ms_per_image": 54.6
     },
     {
       "model": "дообученная waste-yolo-0.1",
       "version": "waste-yolo-0.1",
       "class_map": "native",
-      "mAP50": 0.3953,
+      "mAP50": 0.367,
       "AP50_per_class": {
-        "pet_bottle": 0.3825,
-        "hard_plastic": 0.4267,
-        "film": 0.27,
-        "paper": 0.8693,
-        "cardboard": 0.7418,
-        "tetra_pak": 0.103,
-        "glass": 0.6128,
-        "aluminum_can": 0.1137,
-        "tin_can": 0.733,
+        "pet_bottle": 0.2823,
+        "hard_plastic": 0.4366,
+        "film": 0.1789,
+        "paper": 0.8546,
+        "cardboard": 0.7328,
+        "tetra_pak": 0.0481,
+        "glass": 0.6589,
+        "aluminum_can": 0.0996,
+        "tin_can": 0.6726,
         "textile": 0.0,
-        "other": 0.0959
+        "other": 0.0722
       },
-      "right_bin_single_item": 0.7795,
+      "right_bin_single_item": 0.7453,
       "single_item_photos": 322,
-      "ms_per_image": 11.0
+      "ms_per_image": 24.1
     }
   ]
 }
