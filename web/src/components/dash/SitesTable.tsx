@@ -47,7 +47,7 @@ export default function SitesTable({ rows, onOpen }: { rows: SiteRating[]; onOpe
           <tbody>
             {sorted.map((r) => (
               <tr key={r.site_id} onClick={() => r.site_id && onOpen(r.site_id)} className="cursor-pointer border-t border-slate-100 hover:bg-brand-light/40 dark:border-slate-800 dark:hover:bg-slate-800">
-                <td className="px-3 py-2">
+                <td className="min-w-[220px] px-3 py-2">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: DOT[cleanlinessColor(r.cleanliness_score)] }} />
                     <span>{r.address}</span>

@@ -50,20 +50,20 @@ export default function ReportsPanel({ districts }: { districts: { id: string; n
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <section className="card space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <select className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value as ReportStatus | '')}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <select className="input" value={status} onChange={(e) => setStatus(e.target.value as ReportStatus | '')}>
             <option value="">{t('rep.allStatuses')}</option>
             {REPORT_STATUSES.map((s) => <option key={s} value={s}>{t('rep.status.' + s)}</option>)}
           </select>
-          <select className="input w-auto" value={type} onChange={(e) => setType(e.target.value as ReportType | '')}>
+          <select className="input" value={type} onChange={(e) => setType(e.target.value as ReportType | '')}>
             <option value="">{t('rep.allTypes')}</option>
             {REPORT_TYPES.map((s) => <option key={s} value={s}>{t('rep.type.' + s)}</option>)}
           </select>
-          <select className="input w-auto" value={district} onChange={(e) => setDistrict(e.target.value)}>
+          <select className="input" value={district} onChange={(e) => setDistrict(e.target.value)}>
             <option value="">{t('dash.allDistricts')}</option>
             {districts.map((d) => <option key={d.id} value={d.id}>{d.name_ru}</option>)}
           </select>
-          <span className="ml-auto flex items-center gap-1 text-xs text-slate-500"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> {t('dash.live')}</span>
+          <span className="flex items-center gap-1 text-xs text-slate-500 sm:col-span-3"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> {t('dash.live')}</span>
         </div>
         {err && <p className="text-sm text-red-600">{err}</p>}
         <ul className="max-h-[640px] divide-y divide-slate-100 overflow-auto dark:divide-slate-800">
