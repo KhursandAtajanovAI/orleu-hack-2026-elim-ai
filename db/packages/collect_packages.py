@@ -97,8 +97,30 @@ def get_json(url: str, retries: int = 3) -> dict | None:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:  # noqa: BLE001
-            print(f"  ✗ {url} ({e}), повтор {i + 1}/{retries}", file=sys.stderr)
-            time.sleep(10 * (i + 1))
+            print(f"  ✗ {url[:120]} ({e}), попытка {i + 1}/{retries}", file=sys.stderr)
+            if i + 1 < retries:
+                time.sleep(5 * (i + 1))
+    return None
+
+
+def _search_pages(source: str, country: str, page: int, page_size: int) -> list[dict] | None:
+    """Страница товаров страны. API поиска Open Food Facts часто отвечает 503,
+    поэтому три способа по очереди: /api/v2/search → search-a-licious → страница-фасет страны."""
+    q = urllib.parse.urlencode({"countries_tags": country, "fields": FIELDS, "page": page,
+                                "page_size": page_size, "sort_by": "unique_scans_n"})
+    data = get_json(f"{HOSTS[source]}/api/v2/search?{q}", retries=1)
+    if data and data.get("products") is not None:
+        return data["products"]
+    if source == "off":
+        q = urllib.parse.urlencode({"q": f'countries_tags:"{country}"', "page": page, "page_size": page_size,
+                                    "fields": FIELDS, "langs": "ru,en"})
+        data = get_json(f"https://search.openfoodfacts.org/search?{q}", retries=1)
+        if data and data.get("hits") is not None:
+            return data["hits"]
+    slug = country.split(":")[-1]
+    data = get_json(f"{HOSTS[source]}/country/{slug}/{page}.json?fields={FIELDS}&page_size={page_size}", retries=2)
+    if data and data.get("products") is not None:
+        return data["products"]
     return None
 
 
@@ -108,11 +130,8 @@ def parse_open_facts(source: str, max_pages: int, page_size: int, delay: float) 
     seen: set[str] = set()
     for country in COUNTRIES:
         for page in range(1, max_pages + 1):
-            q = urllib.parse.urlencode({"countries_tags": country, "fields": FIELDS, "page": page,
-                                        "page_size": page_size, "sort_by": "unique_scans_n"})
-            data = get_json(f"{HOSTS[source]}/api/v2/search?{q}")
+            prods = _search_pages(source, country, page, page_size)
             time.sleep(delay)
-            prods = (data or {}).get("products") or []
             if not prods:
                 break
             for p in prods:
@@ -123,16 +142,19 @@ def parse_open_facts(source: str, max_pages: int, page_size: int, delay: float) 
                 if not cls:
                     continue  # без данных об упаковке пользы для сортировки нет
                 seen.add(code)
+                countries = p.get("countries_tags") or []
+                if isinstance(countries, str):
+                    countries = [countries]
                 out.append({
                     "gtin": code,
                     "name": p.get("product_name_ru") or p.get("product_name") or p.get("product_name_kk"),
-                    "brand": (p.get("brands") or "").split(",")[0].strip() or None,
+                    "brand": (p.get("brands") if isinstance(p.get("brands"), str) else ",".join(p.get("brands") or [])).split(",")[0].strip() or None,
                     "quantity": p.get("quantity"), "material": material, "shape": shape, "ai_class": cls,
-                    "countries": [c.split(":")[-1] for c in p.get("countries_tags") or []][:10],
+                    "countries": [c.split(":")[-1] for c in countries][:10],
                     "source": source, "verified": False,
                     "raw": {"packagings": p.get("packagings") or [], "packaging_tags": p.get("packaging_tags") or []},
                 })
-            print(f"{source} {country} стр. {page}: всего {len(out)}")
+            print(f"{source} {country} стр. {page}: всего {len(out)}", flush=True)
             if len(prods) < page_size:
                 break
     return out
