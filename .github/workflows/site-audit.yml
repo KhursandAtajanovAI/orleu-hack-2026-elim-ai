@@ -1,0 +1,25 @@
+name: Аудит сайта (перед финалом)
+on:
+  push:
+    branches: [claude/project-thread-cughe2]
+    paths: ['audit/site-audit.mjs', '.github/workflows/site-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: site-audit, cancel-in-progress: true }
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm i --no-save --no-package-lock playwright@1.49.1 && npx playwright install --with-deps chromium
+        working-directory: /tmp
+      - run: cp audit/site-audit.mjs /tmp/ && cd /tmp && OUT=$GITHUB_WORKSPACE/audit/out node site-audit.mjs > $GITHUB_WORKSPACE/audit/out-log.txt 2>&1 || true
+      - name: Результаты в ветку
+        run: |
+          mkdir -p audit/out; mv audit/out-log.txt audit/out/log.txt
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/out && git commit -m "audit: результаты прогона сайта" && git pull --rebase origin ${GITHUB_REF_NAME} && git push origin HEAD:${GITHUB_REF_NAME}
